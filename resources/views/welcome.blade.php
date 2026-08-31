@@ -236,7 +236,7 @@
       <a href="#categorias">Categorías</a>
       <a href="#oferta">Ofertas</a>
       <a href="#contacto">Contacto</a>
-      <a href="../views/usuarios/login.php" class="btn-login">Iniciar sesión</a>
+      <a href="{{ route ('login')}}"  class="btn-login">Iniciar sesión</a>
     </nav>
   </div>
 </header>
@@ -250,7 +250,7 @@
     <div class="hero-texto">
       <h1>Frutas y verduras frescas directamente para ti</h1>
       <p>Encuentra productos frescos y de calidad para llevar lo mejor a tu mesa.</p>
-      <a href="../views/usuarios/login.php" class="btn-verde">Comprar ahora</a>
+      <a href="{{ route ('login')}}" class="btn-verde">Comprar ahora</a>
     </div>
     <div class="hero-imagen">
       <img src="https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=600&q=80" alt="Frutas y verduras frescas">
