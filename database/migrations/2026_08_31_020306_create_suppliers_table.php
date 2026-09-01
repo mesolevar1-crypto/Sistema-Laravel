@@ -12,7 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('suppliers', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_proveedor');
+            $table->foreignId('id_persona')
+          ->constrained('people', 'id_persona')
+          ->onDelete('cascade');
+            $table->string('frecuencia_entrega');
             $table->timestamps();
         });
     }

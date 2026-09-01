@@ -12,7 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inventories', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_inventario');
+            $table->foreignId('id_producto')
+          ->constrained('people', 'id_persona')
+          ->onDelete('cascade');
+            $table->integer('stock_actual')->unsigned();
+            $table->integer('stock_mínimo')->unsigned();
+            $table->date('fecha_actualizacion');
             $table->timestamps();
         });
     }

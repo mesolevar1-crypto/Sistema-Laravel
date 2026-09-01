@@ -12,8 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('invoices', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+            $table->id('id_factura');
+            $table->string('numero_factura');
+            $table->foreignId('id_venta')
+          ->constrained('sales', 'id_venta')
+          ->onDelete('cascade');
+          $table->date('fecha_registro');
+          $table->date('fecha_emision');
+          $table->decimal('subtotal', 10, 2);
+          $table->decimal('descuento_valor', 10, 2);
+          $table->decimal('total', 10, 2);
+          $table->tinyInteger('estado')->default(1);
+          $table->timestamps();
         });
     }
 

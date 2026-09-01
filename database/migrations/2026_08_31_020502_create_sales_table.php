@@ -12,7 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_venta');
+            $table->foreignId('id_cliente')
+          ->constrained('customers', 'id_cliente')
+          ->onDelete('cascade');
+          $table->foreignId('id_usuario')
+          ->constrained('users', 'id_usuario')
+          ->onDelete('cascade');
+            $table->date('fecha');
+            $table->decimal('total', 10, 2);
+            $table->string('metodo_pago');
+            $table->tinyInteger('estado')->default(1);
             $table->timestamps();
         });
     }
