@@ -40,9 +40,6 @@ Route::post('/registro', [UsuarioController::class, 'registrar'])->name('registr
 |--------------------------------------------------------------------------
 | DASHBOARD ADMINISTRADOR
 |--------------------------------------------------------------------------
-| El sidebar del admin usa 'inicio.index' y 'admin.usuarios' (no
-| 'inicio' ni 'admin.usuarios.crear'), así que se renombran para
-| que coincidan.
 */
 
 Route::get('/admin', [AdminUsuarioController::class, 'index'])->name('inicio.index');
@@ -64,13 +61,22 @@ Route::get('/reportes', fn () => view('dashboard.admin'))->name('reportes.index'
 
 /*
 |--------------------------------------------------------------------------
-| DASHBOARD VENDEDOR
+| DASHBOARD VENDEDOR (TEMPORAL: prueba de login "Hola Vendedor")
 |--------------------------------------------------------------------------
-| El sidebar_vendedor usa 'vendedor.dashboard', 'vendedor.ventas', etc.
 */
 
 Route::get('/vendedor', function () {
-    return view('dashboard.vendedor');
+
+    $usuario = auth()->user();
+
+    return response("Hola Vendedor, tu nombre es: " . ($usuario->persona->nombre ?? 'sin nombre'));
+
+    // ------------------------------------------------------
+    // Versión completa (descomentar cuando la prueba funcione):
+    // ------------------------------------------------------
+    //
+    // return view('dashboard.vendedor');
+
 })->name('vendedor.dashboard');
 
 // TODO: reemplazar por controladores reales cuando existan
