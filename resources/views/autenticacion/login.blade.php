@@ -1,70 +1,10 @@
-<?php
-session_start();
-
-/* =====================================================
-   CONTROLAR BLOQUEO DEL LOGIN
-===================================================== */
-
-$bloqueado = $_SESSION['login_bloqueado'] ?? false;
-$tiempoBloqueo = $_SESSION['login_tiempo'] ?? 0;
-
-/* Si está bloqueado, comprobar si ya pasaron 2 minutos */
-
-if ($bloqueado && $tiempoBloqueo > 0) {
-
-    $tiempoPasado = time() - $tiempoBloqueo;
-
-    if ($tiempoPasado >= 120) {
-
-        /* DESBLOQUEAR */
-
-        $_SESSION['login_intentos'] = 0;
-        $_SESSION['login_bloqueado'] = false;
-        $_SESSION['login_tiempo'] = 0;
-
-        /* ELIMINAR CUALQUIER ALERTA ANTERIOR */
-
-        unset($_SESSION['alert']);
-
-        $bloqueado = false;
-    }
-}
-
-
-/* =====================================================
-   ALERTA
-===================================================== */
-
-$alert = $_SESSION['alert'] ?? null;
-
-
-/* Si ya no está bloqueado, eliminar alerta de bloqueo */
-
-if (!$bloqueado) {
-
-    if (
-        isset($alert['title']) &&
-        $alert['title'] === 'Acceso bloqueado'
-    ) {
-        $alert = null;
-        unset($_SESSION['alert']);
-    }
-}
-
-
-/* Evitar que la alerta quede guardada */
-
-unset($_SESSION['alert']);
-
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VentaNet | Iniciar Sesión</title>
-<link rel="shortcut icon" type="image/png" href="../../img/icon.png">
+<link rel="shortcut icon" type="image/png" href="{{ asset('img/icon.png') }}">
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -425,12 +365,13 @@ a{text-decoration:none}
         <div class="form-contenedor">
 
             <div class="form-header">
-                <img src="../../img/icon.png" alt="VentaNet">
+                <img src="{{ asset('img/icon.png') }}" alt="VentaNet">
                 <div class="logo-nombre">VentaNet</div>
                 <p>Bienvenido, ingresa tus credenciales<br>para iniciar sesión</p>
             </div>
 
-            <form action="../../controllers/AuthController.php" method="POST">
+            <form action="{{ route('login.procesar') }}" method="POST">
+                @csrf
 
                 <div class="campo">
                     <label for="correo">Correo electrónico</label>
@@ -446,6 +387,7 @@ a{text-decoration:none}
                             id="correo"
                             name="correo"
                             placeholder="correo@ejemplo.com"
+                            value="{{ old('correo') }}"
                             required
                             autocomplete="email"
                         >
@@ -495,7 +437,7 @@ a{text-decoration:none}
                 <button
                     type="submit"
                     class="btn-ingresar"
-                    <?= $bloqueado ? 'disabled' : '' ?>
+                    {{ $bloqueado ? 'disabled' : '' }}
                 >
                     Iniciar sesión
                 </button>
@@ -503,9 +445,9 @@ a{text-decoration:none}
             </form>
 
             <div class="pie-form">
-    ¿No tienes cuenta?
-    <a href="{{ route('registre') }}">Regístrate aquí</a>
-</div>
+                ¿No tienes cuenta?
+                <a href="{{ route('registro') }}">Regístrate aquí</a>
+            </div>
 
         </div>
     </div>
@@ -513,8 +455,8 @@ a{text-decoration:none}
     <div class="panel-imagen">
 
         <a href="{{ route('welcome') }}" class="btn-regresar">
-    ← Regresar al Inicio
-</a>
+            ← Regresar al Inicio
+        </a>
 
         <div class="imagen-texto">
             <h2>Frescura y Calidad<br>Directo a tu Mesa</h2>
@@ -529,64 +471,60 @@ a{text-decoration:none}
 
 </div>
 
-<?php if ($alert || $bloqueado): ?>
+@if (session('alert'))
 
-<?php
-if ($bloqueado && !$alert) {
-    $mTipo = 'error';
-    $mTitulo = 'Acceso bloqueado';
-    $mTexto = 'Demasiados intentos fallidos. Espera 2 minutos antes de intentar de nuevo.';
-} else {
-    $mTipo = ($alert['icon'] ?? '') === 'success'
-        ? 'exito'
-        : (($alert['icon'] ?? '') === 'warning' ? 'aviso' : 'error');
+    @php
+        $alert = session('alert');
 
-    $mTitulo = $alert['title'] ?? 'Error';
-    $mTexto = $alert['text'] ?? 'No fue posible iniciar sesión.';
-}
-?>
+        $mTipo = ($alert['icon'] ?? '') === 'success'
+            ? 'exito'
+            : (($alert['icon'] ?? '') === 'warning' ? 'aviso' : 'error');
 
-<div class="modal-overlay">
-    <div class="modal-caja">
+        $mTitulo = $alert['title'] ?? 'Error';
+        $mTexto = $alert['text'] ?? 'No fue posible iniciar sesión.';
+    @endphp
 
-        <div class="modal-icono <?= $mTipo ?>">
+    <div class="modal-overlay">
+        <div class="modal-caja">
 
-            <?php if ($mTipo === 'exito'): ?>
+            <div class="modal-icono {{ $mTipo }}">
 
-                <svg viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                @if ($mTipo === 'exito')
 
-            <?php elseif ($mTipo === 'error'): ?>
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
 
-                <svg viewBox="0 0 24 24">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
+                @elseif ($mTipo === 'error')
 
-            <?php else: ?>
+                    <svg viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
 
-                <svg viewBox="0 0 24 24">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+                @else
 
-            <?php endif; ?>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+
+                @endif
+
+            </div>
+
+            <p class="modal-titulo">{{ $mTitulo }}</p>
+            <p class="modal-texto">{{ $mTexto }}</p>
+
+            <a href="{{ route('login') }}">
+                <button type="button" class="modal-btn {{ $mTipo }}">OK</button>
+            </a>
 
         </div>
-
-        <p class="modal-titulo"><?= htmlspecialchars($mTitulo) ?></p>
-        <p class="modal-texto"><?= htmlspecialchars($mTexto) ?></p>
-
-        <a href="login.php">
-            <button class="modal-btn <?= $mTipo ?>">OK</button>
-        </a>
-
     </div>
-</div>
 
-<?php endif; ?>
+@endif
 
 <script>
 const SVG_VER = '<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
