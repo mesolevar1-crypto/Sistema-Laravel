@@ -514,10 +514,7 @@
 
             <div class="form-header">
 
-                <img
-                    src="{{ asset('img/icon.png') }}"
-                    alt="VentaNet"
-                >
+                <img src="{{ asset('img/icon.png') }}" width="60" height="60" alt="VentaNet Logo">
 
                 <div class="logo-nombre">
                     VentaNet

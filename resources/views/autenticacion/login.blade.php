@@ -365,7 +365,7 @@ a{text-decoration:none}
         <div class="form-contenedor">
 
             <div class="form-header">
-                <img src="{{ asset('img/icon.png') }}" alt="VentaNet">
+                <img src="{{ asset('img/icon.png') }}" width="60" height="60" alt="VentaNet Logo">
                 <div class="logo-nombre">VentaNet</div>
                 <p>Bienvenido, ingresa tus credenciales<br>para iniciar sesión</p>
             </div>

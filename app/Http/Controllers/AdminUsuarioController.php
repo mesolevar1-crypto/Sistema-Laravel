@@ -12,28 +12,19 @@ use Illuminate\Support\Facades\DB;
 class AdminUsuarioController extends Controller
 {
     // ============================================================
-    // MOSTRAR USUARIOS (TEMPORAL: prueba de login "Hola Admin")
+    // MOSTRAR USUARIOS
     // ============================================================
 
     public function index()
     {
-        $usuario = auth()->user();
+        $usuarios = Usuario::with(['persona', 'rol'])
+            ->orderBy('id_usuario')
+            ->paginate(5)
+            ->withQueryString();
 
-        return response("Hola Admin, tu nombre es: " . ($usuario->persona->nombre ?? 'sin nombre'));
+        $roles = Rol::all();
 
-        // ------------------------------------------------------
-        // Versión completa (descomentar cuando la prueba funcione
-        // y quieras volver a la vista real de gestión de usuarios):
-        // ------------------------------------------------------
-        //
-        // $usuarios = Usuario::with(['persona', 'rol'])
-        //     ->orderBy('id_usuario')
-        //     ->paginate(5)
-        //     ->withQueryString();
-        //
-        // $roles = Rol::all();
-        //
-        // return view('dashboard.admin', compact('usuarios', 'roles'));
+        return view('dashboard.admin', compact('usuarios', 'roles'));
     }
 
     // ============================================================
