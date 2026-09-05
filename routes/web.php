@@ -42,7 +42,12 @@ Route::post('/registro', [UsuarioController::class, 'registrar'])->name('registr
 |--------------------------------------------------------------------------
 */
 
-Route::get('/admin', [AdminUsuarioController::class, 'index'])->name('inicio.index');
+// Panel de Inicio (KPIs): va directo a la vista, sin controlador.
+// La vista llama internamente a App\Models\Inicio.
+Route::get('/admin', fn () => view('vista_admin.inicio'))
+    ->middleware(['auth'])
+    ->name('inicio.index');
+
 Route::get('/admin/usuarios', [AdminUsuarioController::class, 'index'])->name('admin.usuarios');
 
 Route::post('/admin/usuarios', [AdminUsuarioController::class, 'crear'])->name('admin.usuarios.crear');
