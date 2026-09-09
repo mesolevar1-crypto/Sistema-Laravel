@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUsuarioController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\CompraController;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,14 +93,27 @@ Route::middleware(['auth'])->group(function () {
 // en vez de renderizar una vista placeholder rota.
 Route::get('/proveedores', fn () => redirect()->route('admin.proveedores'))->name('proveedores.index');
 
+/*
+|--------------------------------------------------------------------------
+| COMPRAS (Administrador) — con controlador
+| Todo bajo /admin/compras, consistente con clientes y proveedores.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/compras', [CompraController::class, 'index'])->name('admin.compras');
+    Route::post('/admin/compras', [CompraController::class, 'store'])->name('admin.compras.store');
+    Route::get('/admin/compras/{id}/detalle', [CompraController::class, 'detalle'])->name('admin.compras.detalle');
+    Route::delete('/admin/compras/{id}', [CompraController::class, 'destroy'])->name('admin.compras.destroy');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /compras (nombre
+// antiguo 'compras.index'), lo mandamos a la ruta real del controlador.
+Route::get('/compras', fn () => redirect()->route('admin.compras'))->name('compras.index');
+
 // TODO: reemplazar por controladores y vistas reales cuando existan.
 // Usan una vista placeholder propia (dashboard.proximamente) para no
 // depender de $usuarios/$roles, que solo existen en dashboard.admin.
-Route::get('/compras', fn () => view('dashboard.proximamente', [
-    'titulo'    => 'Gestionar Compras',
-    'subtitulo' => 'Administra las compras a tus proveedores',
-]))->name('compras.index');
-
 Route::get('/inventario', fn () => view('dashboard.proximamente', [
     'titulo'    => 'Gestionar Inventario',
     'subtitulo' => 'Controla el stock de tu negocio',
