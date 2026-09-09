@@ -17,6 +17,7 @@ return new class extends Migration
           ->constrained('people', 'id_persona')
           ->onDelete('cascade');
             $table->date('fecha_registro');
+            $table->tinyInteger('estado')->default(1);
             $table->timestamps();
         });
     }

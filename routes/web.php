@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUsuarioController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ProveedorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,14 +57,68 @@ Route::post('/admin/usuarios/{id}/toggle', [AdminUsuarioController::class, 'togg
 Route::post('/admin/usuarios/{id}/editar', [AdminUsuarioController::class, 'editar'])->name('admin.usuarios.editar');
 Route::delete('/admin/usuarios/{id}', [AdminUsuarioController::class, 'eliminar'])->name('admin.usuarios.eliminar');
 
-// TODO: reemplazar por controladores reales cuando existan
-Route::get('/clientes', fn () => view('dashboard.admin'))->name('clientes.index');
-Route::get('/proveedores', fn () => view('dashboard.admin'))->name('proveedores.index');
-Route::get('/compras', fn () => view('dashboard.admin'))->name('compras.index');
-Route::get('/inventario', fn () => view('dashboard.admin'))->name('inventario.index');
-Route::get('/productos', fn () => view('dashboard.admin'))->name('productos.index');
-Route::get('/ventas', fn () => view('dashboard.admin'))->name('ventas.index');
-Route::get('/reportes', fn () => view('dashboard.admin'))->name('reportes.index');
+/*
+|--------------------------------------------------------------------------
+| CLIENTES (Administrador) — con controlador
+| Todo bajo /admin/clientes (plural), consistente con /admin/usuarios.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/clientes', [ClienteController::class, 'index'])->name('admin.clientes');
+    Route::post('/admin/clientes', [ClienteController::class, 'store'])->name('admin.clientes.store');
+    Route::post('/admin/clientes/{id}/editar', [ClienteController::class, 'update'])->name('admin.clientes.update');
+    Route::post('/admin/clientes/{id}/toggle', [ClienteController::class, 'toggleEstado'])->name('admin.clientes.toggle');
+    Route::delete('/admin/clientes/{id}', [ClienteController::class, 'destroy'])->name('admin.clientes.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| PROVEEDORES (Administrador) — con controlador
+| Todo bajo /admin/proveedores, consistente con /admin/clientes.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/proveedores', [ProveedorController::class, 'index'])->name('admin.proveedores');
+    Route::post('/admin/proveedores', [ProveedorController::class, 'store'])->name('admin.proveedores.store');
+    Route::post('/admin/proveedores/{id}/editar', [ProveedorController::class, 'update'])->name('admin.proveedores.update');
+    Route::post('/admin/proveedores/{id}/toggle', [ProveedorController::class, 'toggleEstado'])->name('admin.proveedores.toggle');
+    Route::delete('/admin/proveedores/{id}', [ProveedorController::class, 'destroy'])->name('admin.proveedores.destroy');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /proveedores (nombre
+// antiguo 'proveedores.index'), lo mandamos a la ruta real del controlador
+// en vez de renderizar una vista placeholder rota.
+Route::get('/proveedores', fn () => redirect()->route('admin.proveedores'))->name('proveedores.index');
+
+// TODO: reemplazar por controladores y vistas reales cuando existan.
+// Usan una vista placeholder propia (dashboard.proximamente) para no
+// depender de $usuarios/$roles, que solo existen en dashboard.admin.
+Route::get('/compras', fn () => view('dashboard.proximamente', [
+    'titulo'    => 'Gestionar Compras',
+    'subtitulo' => 'Administra las compras a tus proveedores',
+]))->name('compras.index');
+
+Route::get('/inventario', fn () => view('dashboard.proximamente', [
+    'titulo'    => 'Gestionar Inventario',
+    'subtitulo' => 'Controla el stock de tu negocio',
+]))->name('inventario.index');
+
+Route::get('/productos', fn () => view('dashboard.proximamente', [
+    'titulo'    => 'Gestionar Productos',
+    'subtitulo' => 'Administra tu catálogo de productos',
+]))->name('productos.index');
+
+Route::get('/ventas', fn () => view('dashboard.proximamente', [
+    'titulo'    => 'Gestionar Ventas',
+    'subtitulo' => 'Consulta y registra tus ventas',
+]))->name('ventas.index');
+
+Route::get('/reportes', fn () => view('dashboard.proximamente', [
+    'titulo'    => 'Reportes',
+    'subtitulo' => 'Consulta reportes de tu negocio',
+]))->name('reportes.index');
 
 /*
 |--------------------------------------------------------------------------

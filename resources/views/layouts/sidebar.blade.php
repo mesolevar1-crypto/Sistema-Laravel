@@ -106,8 +106,8 @@
             <i class="fas fa-users"></i><span>Usuarios</span>
         </a>
 
-        <a href="{{ route('clientes.index') }}"
-           class="nav-item {{ request()->routeIs('clientes.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.clientes') }}"
+           class="nav-item {{ request()->routeIs('admin.clientes*') ? 'activo' : '' }}">
             <i class="fas fa-user-tie"></i><span>Clientes</span>
         </a>
 
