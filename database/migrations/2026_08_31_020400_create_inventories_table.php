@@ -17,7 +17,7 @@ return new class extends Migration
           ->constrained('people', 'id_persona')
           ->onDelete('cascade');
             $table->integer('stock_actual')->unsigned();
-            $table->integer('stock_mínimo')->unsigned();
+            $table->integer('stock_minimo')->unsigned();
             $table->date('fecha_actualizacion');
             $table->timestamps();
         });

@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminUsuarioController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
+use App\Http\Controllers\InventarioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,14 +112,25 @@ Route::middleware(['auth'])->group(function () {
 // antiguo 'compras.index'), lo mandamos a la ruta real del controlador.
 Route::get('/compras', fn () => redirect()->route('admin.compras'))->name('compras.index');
 
+/*
+|--------------------------------------------------------------------------
+| INVENTARIO (Administrador) — con controlador
+| Todo bajo /admin/inventario, consistente con los demás módulos.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/inventario', [InventarioController::class, 'index'])->name('admin.inventario');
+    Route::post('/admin/inventario/{id}/actualizar', [InventarioController::class, 'actualizar'])->name('admin.inventario.actualizar');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /inventario (nombre
+// antiguo 'inventario.index'), lo mandamos a la ruta real del controlador.
+Route::get('/inventario', fn () => redirect()->route('admin.inventario'))->name('inventario.index');
+
 // TODO: reemplazar por controladores y vistas reales cuando existan.
 // Usan una vista placeholder propia (dashboard.proximamente) para no
 // depender de $usuarios/$roles, que solo existen en dashboard.admin.
-Route::get('/inventario', fn () => view('dashboard.proximamente', [
-    'titulo'    => 'Gestionar Inventario',
-    'subtitulo' => 'Controla el stock de tu negocio',
-]))->name('inventario.index');
-
 Route::get('/productos', fn () => view('dashboard.proximamente', [
     'titulo'    => 'Gestionar Productos',
     'subtitulo' => 'Administra tu catálogo de productos',
