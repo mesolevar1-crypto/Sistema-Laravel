@@ -9,6 +9,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\VentaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -152,14 +153,27 @@ Route::middleware(['auth'])->group(function () {
 // antiguo 'productos.index'), lo mandamos a la ruta real del controlador.
 Route::get('/productos', fn () => redirect()->route('admin.productos'))->name('productos.index');
 
-// TODO: reemplazar por controladores y vistas reales cuando existan.
-// Usan una vista placeholder propia (dashboard.proximamente) para no
-// depender de $usuarios/$roles, que solo existen en dashboard.admin.
-Route::get('/ventas', fn () => view('dashboard.proximamente', [
-    'titulo'    => 'Gestionar Ventas',
-    'subtitulo' => 'Consulta y registra tus ventas',
-]))->name('ventas.index');
+/*
+|--------------------------------------------------------------------------
+| VENTAS (Administrador) — con controlador
+| Todo bajo /admin/ventas, consistente con los demás módulos.
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/ventas', [VentaController::class, 'index'])->name('admin.ventas');
+    Route::post('/admin/ventas', [VentaController::class, 'store'])->name('admin.ventas.store');
+    Route::get('/admin/ventas/{id}/detalle', [VentaController::class, 'detalle'])->name('admin.ventas.detalle');
+    Route::post('/admin/ventas/{id}/anular', [VentaController::class, 'anular'])->name('admin.ventas.anular');
+    Route::post('/admin/ventas/{id}/reactivar', [VentaController::class, 'reactivar'])->name('admin.ventas.reactivar');
+    Route::get('/admin/ventas/{id}/factura', [VentaController::class, 'factura'])->name('admin.ventas.factura');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /ventas (nombre
+// antiguo 'ventas.index'), lo mandamos a la ruta real del controlador.
+Route::get('/ventas', fn () => redirect()->route('admin.ventas'))->name('ventas.index');
+
+// TODO: reemplazar por controlador y vista real cuando exista.
 Route::get('/reportes', fn () => view('dashboard.proximamente', [
     'titulo'    => 'Reportes',
     'subtitulo' => 'Consulta reportes de tu negocio',
