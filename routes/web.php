@@ -8,6 +8,7 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\ProductoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -128,14 +129,32 @@ Route::middleware(['auth'])->group(function () {
 // antiguo 'inventario.index'), lo mandamos a la ruta real del controlador.
 Route::get('/inventario', fn () => redirect()->route('admin.inventario'))->name('inventario.index');
 
+/*
+|--------------------------------------------------------------------------
+| PRODUCTOS Y CATEGORÍAS (Administrador) — con controlador
+| Todo bajo /admin/productos y /admin/categorias.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/productos', [ProductoController::class, 'index'])->name('admin.productos');
+    Route::post('/admin/productos', [ProductoController::class, 'store'])->name('admin.productos.store');
+    Route::post('/admin/productos/{id}/editar', [ProductoController::class, 'update'])->name('admin.productos.update');
+    Route::post('/admin/productos/{id}/toggle', [ProductoController::class, 'toggleEstado'])->name('admin.productos.toggle');
+    Route::delete('/admin/productos/{id}', [ProductoController::class, 'destroy'])->name('admin.productos.destroy');
+
+    Route::post('/admin/categorias', [ProductoController::class, 'storeCategoria'])->name('admin.categorias.store');
+    Route::post('/admin/categorias/{id}/editar', [ProductoController::class, 'updateCategoria'])->name('admin.categorias.update');
+    Route::delete('/admin/categorias/{id}', [ProductoController::class, 'destroyCategoria'])->name('admin.categorias.destroy');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /productos (nombre
+// antiguo 'productos.index'), lo mandamos a la ruta real del controlador.
+Route::get('/productos', fn () => redirect()->route('admin.productos'))->name('productos.index');
+
 // TODO: reemplazar por controladores y vistas reales cuando existan.
 // Usan una vista placeholder propia (dashboard.proximamente) para no
 // depender de $usuarios/$roles, que solo existen en dashboard.admin.
-Route::get('/productos', fn () => view('dashboard.proximamente', [
-    'titulo'    => 'Gestionar Productos',
-    'subtitulo' => 'Administra tu catálogo de productos',
-]))->name('productos.index');
-
 Route::get('/ventas', fn () => view('dashboard.proximamente', [
     'titulo'    => 'Gestionar Ventas',
     'subtitulo' => 'Consulta y registra tus ventas',
