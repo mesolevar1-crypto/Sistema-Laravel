@@ -4,23 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * Controlador de Cliente.
  *
- * Equivalente al antiguo controllers/ClienteController.php, pero
- * dividido en acciones REST (index, store, update, toggleEstado,
- * destroy) en vez de un switch por $_GET['accion'].
+ * index()         -> Administrador: ve TODOS los clientes.
+ * vendedorIndex()  -> Vendedor: ve solo LOS SUYOS.
  *
- * El "regresar según el rol" del original (admin -> su panel,
- * vendedor -> el suyo) se resuelve leyendo auth()->user()->rol,
- * igual que antes leía $_SESSION['usuario']['rol'].
+ * store/update/toggleEstado/destroy son compartidos entre ambos
+ * paneles. Cuando la petición llega por una ruta "vendedor.*", se
+ * valida que el cliente sobre el que se actúa le pertenezca al
+ * vendedor autenticado (mismo patrón usado en VentaController).
  */
 class ClienteController extends Controller
 {
     // ============================================================
-    // LISTADO (con paginación simple, igual que el original)
+    // LISTADO — ADMIN (con paginación simple, igual que el original)
     // ============================================================
     public function index(Request $request)
     {
@@ -36,7 +35,27 @@ class ClienteController extends Controller
     }
 
     // ============================================================
+    // LISTADO — VENDEDOR (solo SUS propios clientes)
+    // ============================================================
+    public function vendedorIndex(Request $request)
+    {
+        $idUsuario = (int) (auth()->id() ?? 0);
+
+        $todos = Cliente::obtenerTodos($idUsuario);
+
+        $porPagina = 5;
+        $total     = count($todos);
+        $paginas   = max(1, (int) ceil($total / $porPagina));
+        $pagina    = max(1, min((int) $request->input('pagina', 1), $paginas));
+        $clientes  = array_slice($todos, ($pagina - 1) * $porPagina, $porPagina);
+
+        return view('vista_vendedor.clientes', compact('clientes', 'pagina', 'paginas', 'total'));
+    }
+
+    // ============================================================
     // REGISTRAR
+    // El cliente queda asociado a quien lo crea (admin o vendedor),
+    // así el filtro de "mis clientes" del vendedor funciona.
     // ============================================================
     public function store(Request $request)
     {
@@ -56,7 +75,9 @@ class ClienteController extends Controller
             return $this->regresarConAlerta('error', 'Correo duplicado', 'El correo electrónico ya está registrado.');
         }
 
-        $resultado = Cliente::registrar(compact('nombre', 'telefono', 'correo'));
+        $idUsuario = (int) (auth()->id() ?? 0);
+
+        $resultado = Cliente::registrar(compact('nombre', 'telefono', 'correo'), $idUsuario ?: null);
 
         if ($resultado === true) {
             return $this->regresarConAlerta('success', '¡Cliente registrado!', 'El cliente fue registrado correctamente.');
@@ -81,6 +102,10 @@ class ClienteController extends Controller
 
         if ($correo !== '' && !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
             return $this->regresarConAlerta('warning', 'Correo inválido', 'El correo electrónico no es válido.');
+        }
+
+        if ($this->esRutaVendedor() && !$this->clientePerteneceAlVendedorActual($idCliente)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes editar un cliente que no es tuyo.');
         }
 
         $resultado = Cliente::editarCompleto($idCliente, $nombre, $telefono, $correo);
@@ -109,12 +134,15 @@ class ClienteController extends Controller
             return $this->regresarConAlerta('error', 'Error', 'Cliente no encontrado.');
         }
 
+        if ($this->esRutaVendedor() && (int) ($cliente['id_usuario'] ?? 0) !== (int) (auth()->id() ?? 0)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes cambiar el estado de un cliente que no es tuyo.');
+        }
+
         $resultado = Cliente::cambiarEstado($idCliente);
 
         if ($resultado === true) {
             // $cliente trae el estado ANTES del cambio, así calculamos
-            // el mensaje igual que el original (que primero invertía
-            // el estado y luego lo usaba para el texto de la alerta).
+            // el mensaje igual que el original.
             $quedoActivo = $cliente['estado'] !== 'activo';
 
             return $this->regresarConAlerta(
@@ -138,6 +166,10 @@ class ClienteController extends Controller
             return $this->regresarConAlerta('error', 'Error', 'Cliente no válido.');
         }
 
+        if ($this->esRutaVendedor() && !$this->clientePerteneceAlVendedorActual($idCliente)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes eliminar un cliente que no es tuyo.');
+        }
+
         $resultado = Cliente::eliminarCliente($idCliente);
 
         if ($resultado === true) {
@@ -148,14 +180,36 @@ class ClienteController extends Controller
     }
 
     // ============================================================
-    // Redirige según el rol del usuario autenticado, con alerta flash
-    // (equivalente a regresarConAlerta() del controlador original)
+    // ¿La petición actual llegó por una ruta del panel vendedor?
+    // ============================================================
+    private function esRutaVendedor(): bool
+    {
+        $nombreRuta = request()->route()?->getName() ?? '';
+
+        return str_starts_with($nombreRuta, 'vendedor.');
+    }
+
+    // ============================================================
+    // ¿El cliente $idCliente pertenece al vendedor autenticado?
+    // ============================================================
+    private function clientePerteneceAlVendedorActual(int $idCliente): bool
+    {
+        $cliente = Cliente::obtenerPorId($idCliente);
+
+        if (!$cliente) {
+            return false;
+        }
+
+        return (int) ($cliente['id_usuario'] ?? 0) === (int) (auth()->id() ?? 0);
+    }
+
+    // ============================================================
+    // Redirige según la ruta desde la que se hizo la acción, con
+    // alerta flash (rutas "vendedor.*" -> su panel, resto -> admin).
     // ============================================================
     private function regresarConAlerta(string $icon, string $title, string $text)
     {
-        $rol = strtolower(trim(optional(Auth::user())->rol ?? ''));
-
-        $ruta = $rol === 'vendedor' ? 'vendedor.clientes' : 'admin.clientes';
+        $ruta = $this->esRutaVendedor() ? 'vendedor.clientes' : 'admin.clientes';
 
         return redirect()->route($ruta)->with('alert', [
             'icon'  => $icon,

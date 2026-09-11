@@ -384,7 +384,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/vendedor/ventas/{id}/factura', [VentaController::class, 'factura'])->name('vendedor.ventas.factura');
 });
 
-Route::get('/vendedor/clientes', [ClienteController::class, 'vendedorIndex'])->name('vendedor.clientes');
+// CLIENTES (Vendedor) — antes solo existía el listado; se agregan
+// crear/editar/activar-desactivar/eliminar, igual que en el panel admin.
+Route::middleware(['auth'])->group(function () {
+    Route::get('/vendedor/clientes', [ClienteController::class, 'vendedorIndex'])->name('vendedor.clientes');
+    Route::post('/vendedor/clientes', [ClienteController::class, 'store'])->name('vendedor.clientes.store');
+    Route::post('/vendedor/clientes/{id}/editar', [ClienteController::class, 'update'])->name('vendedor.clientes.update');
+    Route::post('/vendedor/clientes/{id}/toggle', [ClienteController::class, 'toggleEstado'])->name('vendedor.clientes.toggle');
+    Route::delete('/vendedor/clientes/{id}', [ClienteController::class, 'destroy'])->name('vendedor.clientes.destroy');
+});
+
 Route::get('/vendedor/productos', [ProductoController::class, 'vendedorIndex'])->name('vendedor.productos');
 Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
 Route::get('/vendedor/reporte', [ReporteController::class, 'vendedorIndex'])->name('vendedor.reporte');
