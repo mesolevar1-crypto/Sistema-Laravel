@@ -375,12 +375,19 @@ Route::get('/vendedor', fn () => view('dashboard.vendedor'))
     ->middleware(['auth'])
     ->name('vendedor.inicio');
 
-// TODO: reemplazar por controladores reales cuando existan
-Route::get('/vendedor/ventas', fn () => view('dashboard.vendedor'))->name('vendedor.ventas');
-Route::get('/vendedor/clientes', fn () => view('dashboard.vendedor'))->name('vendedor.clientes');
-Route::get('/vendedor/productos', fn () => view('dashboard.vendedor'))->name('vendedor.productos');
-Route::get('/vendedor/inventario', fn () => view('dashboard.vendedor'))->name('vendedor.inventario');
-Route::get('/vendedor/reporte', fn () => view('dashboard.vendedor'))->name('vendedor.reporte');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/vendedor/ventas', [VentaController::class, 'vendedorIndex'])->name('vendedor.ventas');
+    Route::post('/vendedor/ventas', [VentaController::class, 'store'])->name('vendedor.ventas.store');
+    Route::get('/vendedor/ventas/{id}/detalle', [VentaController::class, 'detalle'])->name('vendedor.ventas.detalle');
+    Route::post('/vendedor/ventas/{id}/anular', [VentaController::class, 'anular'])->name('vendedor.ventas.anular');
+    Route::post('/vendedor/ventas/{id}/reactivar', [VentaController::class, 'reactivar'])->name('vendedor.ventas.reactivar');
+    Route::get('/vendedor/ventas/{id}/factura', [VentaController::class, 'factura'])->name('vendedor.ventas.factura');
+});
+
+Route::get('/vendedor/clientes', [ClienteController::class, 'vendedorIndex'])->name('vendedor.clientes');
+Route::get('/vendedor/productos', [ProductoController::class, 'vendedorIndex'])->name('vendedor.productos');
+Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
+Route::get('/vendedor/reporte', [ReporteController::class, 'vendedorIndex'])->name('vendedor.reporte');
 
 /*
 |--------------------------------------------------------------------------
