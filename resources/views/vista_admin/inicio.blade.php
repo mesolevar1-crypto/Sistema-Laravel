@@ -30,7 +30,7 @@
     */
 
     // Nombre del usuario autenticado para el saludo
-    $nombreUsuario = e(optional(auth()->user())->nombre ?? 'Administrador');
+    $nombreUsuario = e(optional(auth()->user()->persona)->nombre ?? 'Administrador');
 
     // ── Valores reales de las tarjetas ───────────────────────────
     $ventasDiaRaw       = Inicio::ventasDia();
@@ -69,7 +69,12 @@
     $valoresDias = array_values($ventas7Dias);
 @endphp
 
-@include('layouts.header', ['titulo' => 'Panel de Inicio - Administrador'])
+@php
+    $titulo = 'Panel de Inicio - Administrador';
+    // ... el resto de tu código igual
+@endphp
+
+@include('layouts.header')
 @include('layouts.sidebar')
 
 <!-- ── Estilos locales del Inicio ── -->

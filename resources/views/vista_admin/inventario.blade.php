@@ -1,5 +1,7 @@
 @extends('layouts.dashboard')
-
+@php
+    $titulo = 'Panel de inventario - Administrador';
+@endphp
 @section('content')
 
 <style>

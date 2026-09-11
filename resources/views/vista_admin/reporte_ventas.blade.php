@@ -1,5 +1,7 @@
 @extends('layouts.dashboard')
-
+@php
+    $titulo = 'Panel de reporte de ventas - Administrador';
+@endphp
 @section('content')
 
 <script src="{{ asset('js/chart.umd.js') }}"

@@ -5,9 +5,8 @@
     ============================================================
 --}}
 
-@include('layouts.header', ['titulo' => 'Panel de clientes - Administrador'])
-
-@include('layouts.sidebar')
+@include('layouts.header')
+@include('layouts.sidebar', ['titulo' => 'Panel de clientes - Administrador'])
 
 
 <style>

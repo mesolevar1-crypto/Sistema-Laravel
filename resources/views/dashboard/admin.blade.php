@@ -1,5 +1,9 @@
 @extends('layouts.dashboard')
 
+@php
+    $titulo = 'Panel de usuarios - Administrador';
+@endphp
+
 @section('content')
 
 <style>

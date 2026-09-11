@@ -5,8 +5,8 @@
     ============================================================
 --}}
 
-@include('layouts.header', ['titulo' => 'Panel de proveedores - Administrador'])
-@include('layouts.sidebar')
+@include('layouts.header')
+@include('layouts.sidebar', ['titulo' => 'Panel de proveedores - Administrador'])
 
 <style>
 .btn-primario,.btn-peligro,.btn-cancelar,.btn-accion,.pag{cursor:pointer;font-weight:600}
