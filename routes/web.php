@@ -361,25 +361,19 @@ Route::middleware(['auth'])->group(function () {
 // antiguo 'reportes.index'), lo mandamos a la ruta real.
 Route::get('/reportes', fn () => redirect()->route('admin.reportes'))->name('reportes.index');
 
+
+
 /*
 |--------------------------------------------------------------------------
-| DASHBOARD VENDEDOR (TEMPORAL: prueba de login "Hola Vendedor")
+| DASHBOARD VENDEDOR
 |--------------------------------------------------------------------------
 */
 
-Route::get('/vendedor', function () {
-
-    $usuario = auth()->user();
-
-    return response("Hola Vendedor, tu nombre es: " . ($usuario->persona->nombre ?? 'sin nombre'));
-
-    // ------------------------------------------------------
-    // Versión completa (descomentar cuando la prueba funcione):
-    // ------------------------------------------------------
-    //
-    // return view('dashboard.vendedor');
-
-})->name('vendedor.dashboard');
+// Panel de Inicio (KPIs del vendedor): usa la vista real que ya existe
+// en resources/views/dashboard/vendedor.blade.php
+Route::get('/vendedor', fn () => view('dashboard.vendedor'))
+    ->middleware(['auth'])
+    ->name('vendedor.inicio');
 
 // TODO: reemplazar por controladores reales cuando existan
 Route::get('/vendedor/ventas', fn () => view('dashboard.vendedor'))->name('vendedor.ventas');

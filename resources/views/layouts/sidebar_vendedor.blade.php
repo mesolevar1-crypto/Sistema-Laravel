@@ -95,8 +95,8 @@
 
     <nav class="flex-1 px-3 py-5 flex flex-col gap-0.5 overflow-y-auto">
 
-        <a href="{{ route('vendedor.dashboard') }}"
-           class="nav-item {{ request()->routeIs('vendedor.dashboard') ? 'activo' : '' }}">
+        <a href="{{ route('vendedor.inicio') }}"
+           class="nav-item {{ request()->routeIs('vendedor.inicio') ? 'activo' : '' }}">
             <i class="fas fa-home"></i><span>Inicio</span>
         </a>
 

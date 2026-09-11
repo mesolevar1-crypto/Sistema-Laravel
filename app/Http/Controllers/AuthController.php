@@ -136,7 +136,7 @@ class AuthController extends Controller
         } else {
 
             // OTROS ROLES = VENDEDOR
-            return redirect()->route('vendedor.dashboard');
+            return redirect()->route('vendedor.inicio');
         }
     }
 
