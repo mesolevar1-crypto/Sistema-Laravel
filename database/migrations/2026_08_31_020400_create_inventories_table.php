@@ -6,24 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * La tabla invoices tiene una columna 'fecha_registro' que no
-     * pertenece a la estructura original de 'factura' (legacy).
-     * Probablemente quedó copiada por error de otra migración
-     * (como customers, que sí usa fecha_registro). El modelo Venta
-     * nunca la usa, así que se elimina.
-     */
     public function up(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->dropColumn('fecha_registro');
+        Schema::create('inventories', function (Blueprint $table) {
+            $table->id('id_inventario');
+
+            $table->unsignedBigInteger('id_producto');
+
+            $table->integer('stock_actual')->default(0);
+            $table->integer('stock_minimo')->default(0);
+            $table->timestamp('fecha_actualizacion')->nullable();
+
+            $table->foreign('id_producto')
+                ->references('id_producto')
+                ->on('products')
+                ->onDelete('cascade');
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->date('fecha_registro')->nullable();
-        });
+        Schema::dropIfExists('inventories');
     }
 };

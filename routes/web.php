@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminUsuarioController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\VentaController;
+use App\Models\Reporte;
 
 /*
 |--------------------------------------------------------------------------
@@ -173,11 +175,191 @@ Route::middleware(['auth'])->group(function () {
 // antiguo 'ventas.index'), lo mandamos a la ruta real del controlador.
 Route::get('/ventas', fn () => redirect()->route('admin.ventas'))->name('ventas.index');
 
-// TODO: reemplazar por controlador y vista real cuando exista.
-Route::get('/reportes', fn () => view('dashboard.proximamente', [
-    'titulo'    => 'Reportes',
-    'subtitulo' => 'Consulta reportes de tu negocio',
-]))->name('reportes.index');
+/*
+|--------------------------------------------------------------------------
+| REPORTES (Administrador) — SIN controlador, van directo a la vista.
+| Cada ruta llama al modelo Reporte directamente, igual que el
+| index.php / ventas.php / compras.php / inventario.php originales
+| (que tampoco tenían un controlador propio).
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+
+    // ── Índice: KPIs generales ──
+    Route::get('/admin/reportes', function () {
+        $ventasHoy    = Reporte::ventasHoy();
+        $ventasMes    = Reporte::ventasMes();
+        $comprasMes   = Reporte::comprasMes();
+        $gananciasMes = Reporte::gananciasMes();
+        $stockBajo    = Reporte::contarStockBajo();
+        $agotados     = Reporte::contarAgotados();
+
+        return view('vista_admin.reporte', compact(
+            'ventasHoy', 'ventasMes', 'comprasMes', 'gananciasMes', 'stockBajo', 'agotados'
+        ));
+    })->name('admin.reportes');
+
+    // ── Reporte de ventas ──
+    Route::get('/admin/reportes/ventas', function (Request $request) {
+        $desde     = $request->input('desde', now()->startOfMonth()->toDateString());
+        $hasta     = $request->input('hasta', now()->toDateString());
+        $idUsuario = (int) $request->input('id_usuario', 0);
+
+        if ($desde > $hasta) {
+            $desde = $hasta;
+        }
+
+        $agrupacion = $request->input('agrupacion', 'dia');
+        if (!in_array($agrupacion, ['dia', 'semana', 'mes'], true)) {
+            $agrupacion = 'dia';
+        }
+
+        $ventas           = Reporte::reporteVentas($desde, $hasta, $idUsuario);
+        $usuarios         = Reporte::listaUsuarios();
+        $gananciasPeriodo = Reporte::gananciasPorPeriodo($desde, $hasta, $agrupacion, $idUsuario);
+
+        $totalRegistros = count($ventas);
+        $totalVendido   = array_sum(array_column($ventas, 'total'));
+        $totalGanancia  = array_sum(array_column($ventas, 'ganancia'));
+        $margenGeneral  = $totalVendido > 0 ? round(($totalGanancia / $totalVendido) * 100, 1) : 0;
+
+        $chartLabels   = array_map(fn ($r) => $r['periodo_label'], $gananciasPeriodo);
+        $chartVendido  = array_map(fn ($r) => round((float) $r['total_vendido'], 2), $gananciasPeriodo);
+        $chartGanancia = array_map(fn ($r) => round((float) $r['ganancia'], 2), $gananciasPeriodo);
+
+        $etiquetaAgrupacion = [
+            'dia'    => 'por día',
+            'semana' => 'por semana',
+            'mes'    => 'por mes',
+        ][$agrupacion];
+
+        $nombreArchivoPDF = 'Reporte_Ventas_' . date('Y-m-d', strtotime($desde)) . '_a_' . date('Y-m-d', strtotime($hasta));
+
+        return view('vista_admin.reporte_ventas', compact(
+            'desde', 'hasta', 'idUsuario', 'agrupacion',
+            'ventas', 'usuarios', 'gananciasPeriodo',
+            'totalRegistros', 'totalVendido', 'totalGanancia', 'margenGeneral',
+            'chartLabels', 'chartVendido', 'chartGanancia',
+            'etiquetaAgrupacion', 'nombreArchivoPDF'
+        ));
+    })->name('admin.reportes.ventas');
+
+    // ── Reporte de compras ──
+    Route::get('/admin/reportes/compras', function (Request $request) {
+        $desde  = $request->input('desde', now()->startOfMonth()->toDateString());
+        $hasta  = $request->input('hasta', now()->toDateString());
+        $idProv = (int) $request->input('id_proveedor', 0);
+
+        if ($desde > $hasta) {
+            $desde = $hasta;
+        }
+
+        $agrupacion = $request->input('agrupacion', 'dia');
+        if (!in_array($agrupacion, ['dia', 'semana', 'mes'], true)) {
+            $agrupacion = 'dia';
+        }
+
+        $compras     = Reporte::reporteCompras($desde, $hasta, $idProv);
+        $proveedores = Reporte::listaProveedores();
+
+        $totalRegistros    = count($compras);
+        $totalComprado     = array_sum(array_column($compras, 'total'));
+        $promedioCompra    = $totalRegistros > 0 ? round($totalComprado / $totalRegistros) : 0;
+        $proveedoresUnicos = count(array_unique(array_filter(array_column($compras, 'proveedor'))));
+
+        // Agrupar compras por periodo para el gráfico (día/semana/mes).
+        $meses = [
+            '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+            '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+            '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
+        ];
+
+        $grupos = [];
+        foreach ($compras as $c) {
+            $ts = strtotime($c['fecha']);
+            switch ($agrupacion) {
+                case 'semana':
+                    $key   = date('o', $ts) . '-' . date('W', $ts);
+                    $label = 'Sem. ' . date('W', $ts) . ' · ' . date('Y', $ts);
+                    break;
+                case 'mes':
+                    $key   = date('Y-m', $ts);
+                    $label = $meses[date('m', $ts)] . ' ' . date('Y', $ts);
+                    break;
+                default:
+                    $key   = date('Y-m-d', $ts);
+                    $label = date('d/m', $ts);
+            }
+            if (!isset($grupos[$key])) {
+                $grupos[$key] = ['label' => $label, 'orden' => $ts, 'total' => 0.0, 'cantidad' => 0];
+            }
+            $grupos[$key]['total']    += (float) $c['total'];
+            $grupos[$key]['cantidad'] += 1;
+        }
+        uasort($grupos, fn ($a, $b) => $a['orden'] <=> $b['orden']);
+        $comprasPeriodo = array_values($grupos);
+
+        $chartLabels = array_map(fn ($r) => $r['label'], $comprasPeriodo);
+        $chartTotal  = array_map(fn ($r) => round($r['total'], 2), $comprasPeriodo);
+        $chartCant   = array_map(fn ($r) => $r['cantidad'], $comprasPeriodo);
+
+        $etiquetaAgrupacion = [
+            'dia'    => 'por día',
+            'semana' => 'por semana',
+            'mes'    => 'por mes',
+        ][$agrupacion];
+
+        $nombreArchivoPDF = 'Reporte_Compras_' . date('Y-m-d', strtotime($desde)) . '_a_' . date('Y-m-d', strtotime($hasta));
+
+        return view('vista_admin.reporte_compras', compact(
+            'desde', 'hasta', 'idProv', 'agrupacion',
+            'compras', 'proveedores',
+            'totalRegistros', 'totalComprado', 'promedioCompra', 'proveedoresUnicos',
+            'comprasPeriodo', 'chartLabels', 'chartTotal', 'chartCant',
+            'etiquetaAgrupacion', 'nombreArchivoPDF'
+        ));
+    })->name('admin.reportes.compras');
+
+    // ── Reporte de inventario ──
+    Route::get('/admin/reportes/inventario', function (Request $request) {
+        $buscar = trim((string) $request->input('buscar', ''));
+        $idCat  = (int) $request->input('id_categoria', 0);
+        $estado = trim((string) $request->input('estado', ''));
+
+        $inventario = Reporte::reporteInventario($buscar, $idCat, $estado);
+        $categorias = Reporte::listaCategorias();
+
+        $totalProductos = count($inventario);
+        $totalUnidades  = 0;
+        $totalBajo      = 0;
+        $totalAgotado   = 0;
+
+        foreach ($inventario as $fila) {
+            $stockActual = (int) $fila['stock_actual'];
+            $stockMinimo = (int) $fila['stock_minimo'];
+            $totalUnidades += $stockActual;
+
+            if ($stockActual === 0) {
+                $totalAgotado++;
+            } elseif ($stockActual <= $stockMinimo) {
+                $totalBajo++;
+            }
+        }
+
+        $nombreArchivoPDF = 'Reporte_Inventario_' . date('Y-m-d');
+
+        return view('vista_admin.reporte_inventario', compact(
+            'buscar', 'idCat', 'estado', 'inventario', 'categorias',
+            'totalProductos', 'totalUnidades', 'totalBajo', 'totalAgotado',
+            'nombreArchivoPDF'
+        ));
+    })->name('admin.reportes.inventario');
+});
+
+// Alias legado: si algo en el proyecto aún enlaza a /reportes (nombre
+// antiguo 'reportes.index'), lo mandamos a la ruta real.
+Route::get('/reportes', fn () => redirect()->route('admin.reportes'))->name('reportes.index');
 
 /*
 |--------------------------------------------------------------------------

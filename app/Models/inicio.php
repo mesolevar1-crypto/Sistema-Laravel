@@ -9,8 +9,13 @@ use Throwable;
 /**
  * Modelo Inicio — KPIs y datos del panel principal.
  *
- * Se apoya en las mismas tablas que el módulo de Ventas:
- * venta, detalle_venta, producto, inventario.
+ * Tablas usadas (ya migradas a inglés):
+ *   sales          (antes 'venta')          PK: id_venta
+ *   sales_details  (antes 'detalle_venta')  PK: id_detalle
+ *   products       (antes 'producto')       PK: id_producto
+ *   inventories    (antes 'inventario')     PK: id_inventario
+ *   customers      (antes 'cliente')        PK: id_cliente
+ *   users          (antes 'usuario')        PK: id_usuario
  *
  * Todos los métodos relacionados con VENTAS aceptan un parámetro
  * opcional $idUsuario:
@@ -25,7 +30,7 @@ use Throwable;
  * la vista del vendedor.
  *
  * Stock bajo se calcula comparando i.stock_actual contra
- * i.stock_minimo (columna real de la tabla inventario).
+ * i.stock_minimo (columna real de la tabla inventories).
  *
  * NOTA: se usan métodos estáticos a propósito para poder llamarlos
  * directamente desde la vista Blade (App\Models\Inicio::ventasDia())
@@ -40,7 +45,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COALESCE(SUM(total), 0) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1 AND DATE(fecha) = CURDATE()"
                  . ($idUsuario ? " AND id_usuario = ?" : "");
 
@@ -62,7 +67,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COALESCE(SUM(total), 0) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1
                       AND MONTH(fecha) = MONTH(CURDATE())
                       AND YEAR(fecha)  = YEAR(CURDATE())"
@@ -89,8 +94,8 @@ class Inicio
     {
         try {
             $sql = "SELECT COALESCE(SUM(dv.subtotal - (dv.costo_unitario * dv.cantidad)), 0) AS ganancia
-                    FROM detalle_venta dv
-                    INNER JOIN venta v ON v.id_venta = dv.id_venta
+                    FROM sales_details dv
+                    INNER JOIN sales v ON v.id_venta = dv.id_venta
                     WHERE v.estado = 1
                       AND v.fecha >= (CURDATE() - INTERVAL 6 DAY)";
 
@@ -113,7 +118,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COALESCE(SUM(total), 0) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1"
                  . ($idUsuario ? " AND id_usuario = ?" : "");
 
@@ -135,7 +140,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COALESCE(AVG(total), 0) AS promedio
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1"
                  . ($idUsuario ? " AND id_usuario = ?" : "");
 
@@ -157,8 +162,8 @@ class Inicio
     {
         try {
             $sql = "SELECT COUNT(*) AS total
-                    FROM inventario i
-                    INNER JOIN producto p ON p.id_producto = i.id_producto
+                    FROM inventories i
+                    INNER JOIN products p ON p.id_producto = i.id_producto
                     WHERE p.estado = 1
                       AND i.stock_actual <= i.stock_minimo";
 
@@ -178,7 +183,7 @@ class Inicio
     public static function totalClientes()
     {
         try {
-            $sql = "SELECT COUNT(*) AS total FROM cliente";
+            $sql = "SELECT COUNT(*) AS total FROM customers";
             $fila = DB::selectOne($sql);
 
             return (int) ($fila->total ?? 0);
@@ -195,7 +200,7 @@ class Inicio
     public static function totalProductos()
     {
         try {
-            $sql = "SELECT COUNT(*) AS total FROM producto WHERE estado = 1";
+            $sql = "SELECT COUNT(*) AS total FROM products WHERE estado = 1";
             $fila = DB::selectOne($sql);
 
             return (int) ($fila->total ?? 0);
@@ -213,7 +218,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COUNT(*) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1 AND DATE(fecha) = CURDATE()"
                  . ($idUsuario ? " AND id_usuario = ?" : "");
 
@@ -235,7 +240,7 @@ class Inicio
     {
         try {
             $sql = "SELECT COUNT(*) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1
                       AND MONTH(fecha) = MONTH(CURDATE())
                       AND YEAR(fecha)  = YEAR(CURDATE())"
@@ -259,7 +264,7 @@ class Inicio
     public static function totalUsuarios()
     {
         try {
-            $sql = "SELECT COUNT(*) AS total FROM usuario WHERE estado = 1";
+            $sql = "SELECT COUNT(*) AS total FROM users WHERE estado = 1";
             $fila = DB::selectOne($sql);
 
             return (int) ($fila->total ?? 0);
@@ -279,7 +284,7 @@ class Inicio
     {
         try {
             $sql = "SELECT DATE(fecha) AS dia, COALESCE(SUM(total), 0) AS total
-                    FROM venta
+                    FROM sales
                     WHERE estado = 1
                       AND fecha >= (CURDATE() - INTERVAL 6 DAY)"
                  . ($idUsuario ? " AND id_usuario = ?" : "") . "
@@ -314,9 +319,9 @@ class Inicio
     {
         try {
             $sql = "SELECT p.nombre, SUM(dv.cantidad) AS cantidad_vendida
-                    FROM detalle_venta dv
-                    INNER JOIN venta v    ON v.id_venta = dv.id_venta
-                    INNER JOIN producto p ON p.id_producto = dv.id_producto
+                    FROM sales_details dv
+                    INNER JOIN sales v    ON v.id_venta = dv.id_venta
+                    INNER JOIN products p ON p.id_producto = dv.id_producto
                     WHERE v.estado = 1"
                  . ($idUsuario ? " AND v.id_usuario = ?" : "") . "
                     GROUP BY dv.id_producto, p.nombre

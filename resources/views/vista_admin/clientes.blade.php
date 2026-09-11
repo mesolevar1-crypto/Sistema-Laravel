@@ -6,7 +6,9 @@
 --}}
 
 @include('layouts.header', ['titulo' => 'Panel de clientes - Administrador'])
+
 @include('layouts.sidebar')
+
 
 <style>
 .btn-primario,.btn-eliminar,.btn-cancelar,.btn-accion,.pag{
