@@ -427,7 +427,67 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
     Route::post('/vendedor/inventario/{id}/actualizar', [InventarioController::class, 'actualizar'])->name('vendedor.inventario.actualizar');
 });
-Route::get('/vendedor/reporte', [ReporteController::class, 'vendedorIndex'])->name('vendedor.reporte');
+/*
+|--------------------------------------------------------------------------
+| REPORTE DE VENTAS (Vendedor) — SIN controlador, igual que Admin.
+| El id_usuario NUNCA se toma del request: siempre es el vendedor
+| autenticado, para que no pueda ver ventas de otro ni por URL.
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/vendedor/reporte', function (Request $request) {
+        $idUsuario = (int) (auth()->id() ?? 0);
+
+        $desde = $request->input('desde', now()->startOfMonth()->toDateString());
+        $hasta = $request->input('hasta', now()->toDateString());
+
+        if ($desde > $hasta) {
+            $desde = $hasta;
+        }
+
+        $agrupacion = $request->input('agrupacion', 'dia');
+        if (!in_array($agrupacion, ['dia', 'semana', 'mes'], true)) {
+            $agrupacion = 'dia';
+        }
+
+        $ventas           = Reporte::reporteVentas($desde, $hasta, $idUsuario);
+        $gananciasPeriodo = Reporte::gananciasPorPeriodo($desde, $hasta, $agrupacion, $idUsuario);
+
+        $totalRegistros = count($ventas);
+        $totalVendido   = array_sum(array_column($ventas, 'total'));
+        $totalGanancia  = array_sum(array_column($ventas, 'ganancia'));
+        $margenGeneral  = $totalVendido > 0 ? round(($totalGanancia / $totalVendido) * 100, 1) : 0;
+
+        $chartLabels   = array_map(fn ($r) => $r['periodo_label'], $gananciasPeriodo);
+        $chartVendido  = array_map(fn ($r) => round((float) $r['total_vendido'], 2), $gananciasPeriodo);
+        $chartGanancia = array_map(fn ($r) => round((float) $r['ganancia'], 2), $gananciasPeriodo);
+
+        $etiquetaAgrupacion = [
+            'dia'    => 'por día',
+            'semana' => 'por semana',
+            'mes'    => 'por mes',
+        ][$agrupacion];
+
+        // Nombre del vendedor para el encabezado de impresión: se toma
+        // de la primera venta ya traída (viene del join con people), y
+        // si no hay ventas en el rango, se cae al usuario autenticado.
+        $nombreVendedor = $ventas[0]['vendedor']
+            ?? (auth()->user()->nombre ?? null)
+            ?? (auth()->user()->name ?? null)
+            ?? '';
+
+        $nombreArchivoPDF = 'Mi_Reporte_Ventas_' . date('Y-m-d', strtotime($desde)) . '_a_' . date('Y-m-d', strtotime($hasta));
+
+        return view('vista_vendedor.reporte_ventas', compact(
+            'desde', 'hasta', 'agrupacion',
+            'ventas', 'gananciasPeriodo',
+            'totalRegistros', 'totalVendido', 'totalGanancia', 'margenGeneral',
+            'chartLabels', 'chartVendido', 'chartGanancia',
+            'etiquetaAgrupacion', 'nombreArchivoPDF', 'nombreVendedor'
+        ));
+    })->name('vendedor.reporte');
+});
 
 /*
 |--------------------------------------------------------------------------
