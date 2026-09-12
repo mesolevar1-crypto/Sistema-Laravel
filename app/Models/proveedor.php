@@ -38,13 +38,13 @@ class Proveedor extends Model
     // OBTENER TODOS LOS PROVEEDORES (con datos de persona)
     // ============================================================
     public static function obtenerTodos(): array
-    {
-        return self::with('persona')
-            ->orderByDesc('id_persona')
-            ->get()
-            ->map(fn ($p) => self::aplanar($p))
-            ->all();
-    }
+{
+    return self::with('persona')
+        ->orderByDesc('id_proveedor')
+        ->get()
+        ->map(fn ($p) => self::aplanar($p))
+        ->all();
+}
 
     // ============================================================
     // OBTENER PROVEEDOR POR ID

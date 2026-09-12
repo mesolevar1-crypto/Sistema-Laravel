@@ -53,14 +53,15 @@ class Cliente extends Model
     // $idUsuario = <id> -> vendedor: solo customers.id_usuario = <id>
     // ============================================================
     public static function obtenerTodos(?int $idUsuario = null): array
-    {
-        return self::with('persona')
-            ->when($idUsuario, fn ($query) => $query->where('id_usuario', $idUsuario))
-            ->orderByDesc('fecha_registro')
-            ->get()
-            ->map(fn ($c) => self::aplanar($c))
-            ->all();
-    }
+{
+    return self::with('persona')
+        ->when($idUsuario, fn ($query) => $query->where('id_usuario', $idUsuario))
+        ->orderByDesc('fecha_registro')
+        ->orderByDesc('id_cliente')
+        ->get()
+        ->map(fn ($c) => self::aplanar($c))
+        ->all();
+}
 
     // ============================================================
     // OBTENER CLIENTE POR ID
