@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
  * Controlador de Producto.
  *
  * index()        -> Administrador: ve TODOS los productos.
- * vendedorIndex() -> Vendedor: ve solo LOS SUYOS.
+ * vendedorIndex() -> Vendedor: ve solo LOS SUYOS (products.id_usuario).
  *
  * store/update/toggleEstado/destroy son compartidos entre ambos
  * paneles. Cuando la petición llega por una ruta "vendedor.*", se

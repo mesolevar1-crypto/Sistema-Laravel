@@ -18,8 +18,13 @@ use Throwable;
  * en el modelo legacy Producto.php, que manejaba productos y
  * categorías en un mismo archivo.
  *
- * Las columnas internas se mantienen en español, igual que en
- * los demás modelos ya convertidos.
+ * 'products' ahora tiene la columna id_usuario (FK a users), que
+ * guarda quién registró cada producto. Con esto:
+ *
+ * obtenerTodos() acepta un parámetro opcional $idUsuario:
+ *   - null (o no se pasa) -> Administrador: ve TODOS los productos
+ *   - un id_usuario        -> filtra solo los productos registrados
+ *                             por ESE vendedor
  */
 class Producto extends Model
 {
@@ -33,6 +38,7 @@ class Producto extends Model
         'id_categoria',
         'imagen',
         'estado',
+        'id_usuario',
     ];
 
     // ============================================================
@@ -41,12 +47,17 @@ class Producto extends Model
 
     // ------------------------------------------------------------
     // OBTENER TODOS LOS PRODUCTOS (con categoría y stock)
+    //
+    // $idUsuario = null -> admin: todos los productos.
+    // $idUsuario = <id> -> vendedor: solo los productos con
+    //                      p.id_usuario = <id>.
     // ------------------------------------------------------------
-    public static function obtenerTodos(): array
+    public static function obtenerTodos(?int $idUsuario = null): array
     {
         return DB::table('products as p')
             ->leftJoin('categories as c', 'p.id_categoria', '=', 'c.id_categoria')
             ->leftJoin('inventories as i', 'p.id_producto', '=', 'i.id_producto')
+            ->when($idUsuario, fn ($query) => $query->where('p.id_usuario', $idUsuario))
             ->orderByDesc('p.id_producto')
             ->select([
                 'p.id_producto',
@@ -55,6 +66,7 @@ class Producto extends Model
                 'p.id_categoria',
                 'p.imagen',
                 'p.estado',
+                'p.id_usuario',
                 'c.tipo as categoria',
                 DB::raw('COALESCE(i.stock_actual, 0) as stock_actual'),
                 DB::raw('COALESCE(i.stock_minimo, 0) as stock_minimo'),
@@ -95,6 +107,7 @@ class Producto extends Model
     // ------------------------------------------------------------
     // REGISTRAR PRODUCTO
     // Retorna el id_producto (int) creado, o un string con el error.
+    // Guarda id_usuario para saber quién lo registró.
     // ------------------------------------------------------------
     public static function registrar(array $datos)
     {
@@ -104,6 +117,7 @@ class Producto extends Model
                 'descripcion'  => !empty($datos['descripcion']) ? trim($datos['descripcion']) : null,
                 'id_categoria' => !empty($datos['id_categoria']) ? (int) $datos['id_categoria'] : null,
                 'imagen'       => !empty($datos['imagen']) ? trim($datos['imagen']) : null,
+                'id_usuario'   => !empty($datos['id_usuario']) ? (int) $datos['id_usuario'] : null,
                 'estado'       => true,
             ], 'id_producto');
 
@@ -116,6 +130,7 @@ class Producto extends Model
 
     // ------------------------------------------------------------
     // EDITAR PRODUCTO
+    // (no se reasigna dueño al editar, igual que en Cliente/Venta)
     // ------------------------------------------------------------
     public static function editar(int $idProducto, array $datos)
     {
@@ -186,7 +201,7 @@ class Producto extends Model
     }
 
     // ============================================================
-    // CATEGORÍAS
+    // CATEGORÍAS (catálogo compartido, sin dueño)
     // ============================================================
 
     // ------------------------------------------------------------

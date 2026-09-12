@@ -10,12 +10,16 @@ use Throwable;
 /**
  * Modelo Cliente
  *
- * Tabla: customers (id_cliente, id_persona, fecha_registro, estado, timestamps)
+ * Tabla: customers (id_cliente, id_persona, id_usuario, fecha_registro,
+ * estado, timestamps). id_usuario es FK a users y guarda quién
+ * registró cada cliente.
+ *
  * Relación: pertenece a Persona (tabla people, id_persona).
  *
- * Se dejan métodos estáticos con nombres equivalentes al modelo PHP
- * original para poder llamarlos directo desde la vista o desde las
- * rutas (closures) sin necesidad de un controlador dedicado.
+ * obtenerTodos() acepta un parámetro opcional $idUsuario:
+ *   - null (o no se pasa) -> Administrador: ve TODOS los clientes
+ *   - un id_usuario        -> filtra solo los clientes registrados
+ *                             por ESE vendedor
  */
 class Cliente extends Model
 {
@@ -26,6 +30,7 @@ class Cliente extends Model
         'id_persona',
         'fecha_registro',
         'estado',
+        'id_usuario',
     ];
 
     protected $casts = [
@@ -43,10 +48,14 @@ class Cliente extends Model
 
     // ============================================================
     // OBTENER TODOS LOS CLIENTES (con datos de persona)
+    //
+    // $idUsuario = null -> admin: todos los clientes.
+    // $idUsuario = <id> -> vendedor: solo customers.id_usuario = <id>
     // ============================================================
-    public static function obtenerTodos(): array
+    public static function obtenerTodos(?int $idUsuario = null): array
     {
         return self::with('persona')
+            ->when($idUsuario, fn ($query) => $query->where('id_usuario', $idUsuario))
             ->orderByDesc('fecha_registro')
             ->get()
             ->map(fn ($c) => self::aplanar($c))
@@ -71,6 +80,7 @@ class Cliente extends Model
         return [
             'id_cliente'     => $cliente->id_cliente,
             'id_persona'     => $cliente->id_persona,
+            'id_usuario'     => $cliente->id_usuario,
             'fecha_registro' => optional($cliente->fecha_registro)->format('Y-m-d'),
             'estado'         => $cliente->estado ? 'activo' : 'inactivo',
             'nombre'         => $cliente->persona->nombre ?? '',
@@ -93,11 +103,12 @@ class Cliente extends Model
 
     // ============================================================
     // REGISTRAR CLIENTE
+    // Guarda id_usuario para saber quién lo registró.
     // ============================================================
-    public static function registrar(array $datos)
+    public static function registrar(array $datos, ?int $idUsuario = null)
     {
         try {
-            return DB::transaction(function () use ($datos) {
+            return DB::transaction(function () use ($datos, $idUsuario) {
                 $persona = Persona::create([
                     'nombre'   => $datos['nombre'],
                     'telefono' => $datos['telefono'],
@@ -108,6 +119,7 @@ class Cliente extends Model
                     'id_persona'     => $persona->id_persona,
                     'fecha_registro' => now(),
                     'estado'         => true,
+                    'id_usuario'     => $idUsuario,
                 ]);
 
                 return true;
@@ -119,6 +131,7 @@ class Cliente extends Model
 
     // ============================================================
     // EDITAR CLIENTE
+    // (no se reasigna dueño al editar)
     // ============================================================
     public static function editarCompleto($idCliente, $nombre, $telefono, $correo)
     {
@@ -164,14 +177,11 @@ class Cliente extends Model
 
     // ============================================================
     // VERIFICAR SI TIENE VENTAS
-    // NOTA: asume que aún existe una tabla 'venta' (legado) con
-    // columna 'id_cliente'. Ajusta el nombre si ya migraste ventas
-    // a un modelo Eloquent propio (p. ej. tabla 'sales').
     // ============================================================
     public static function tieneVentas($idCliente): bool
     {
         try {
-            return DB::table('venta')->where('id_cliente', $idCliente)->count() > 0;
+            return DB::table('sales')->where('id_cliente', $idCliente)->count() > 0;
         } catch (Throwable $e) {
             return false;
         }

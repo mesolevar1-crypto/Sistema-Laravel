@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
  * Controlador de Cliente.
  *
  * index()         -> Administrador: ve TODOS los clientes.
- * vendedorIndex()  -> Vendedor: ve solo LOS SUYOS.
+ * vendedorIndex()  -> Vendedor: ve solo LOS SUYOS (customers.id_usuario).
  *
  * store/update/toggleEstado/destroy son compartidos entre ambos
  * paneles. Cuando la petición llega por una ruta "vendedor.*", se
