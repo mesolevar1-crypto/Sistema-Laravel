@@ -3,21 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inventario;
+use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
  * Controlador de Inventario.
  *
- * Equivalente al antiguo controllers/InventarioController.php.
- * Solo tiene una acción real (ajuste manual de stock); el listado
- * vive en index() porque la vista legacy no tenía controlador propio,
- * hacía las consultas directamente.
+ * index()        -> Administrador: ve TODO el inventario.
+ * vendedorIndex() -> Vendedor: ve solo el inventario de SUS productos.
+ *
+ * actualizar() es compartido; cuando la petición llega por una ruta
+ * "vendedor.*" se valida que el producto sobre el que se actúa le
+ * pertenezca al vendedor autenticado (mismo patrón usado en
+ * ProductoController).
  */
 class InventarioController extends Controller
 {
     // ============================================================
-    // LISTADO (con búsqueda, filtro por estado y paginación)
+    // LISTADO — ADMIN (con búsqueda, filtro por estado y paginación)
     // ============================================================
     public function index(Request $request)
     {
@@ -27,13 +31,40 @@ class InventarioController extends Controller
         $todos   = Inventario::obtenerTodos($buscar, $estado);
         $resumen = Inventario::obtenerResumen();
 
-        $porPagina = 5;
-        $total     = count($todos);
-        $paginas   = max(1, (int) ceil($total / $porPagina));
-        $pagina    = max(1, min((int) $request->input('pagina', 1), $paginas));
+        $porPagina  = 5;
+        $total      = count($todos);
+        $paginas    = max(1, (int) ceil($total / $porPagina));
+        $pagina     = max(1, min((int) $request->input('pagina', 1), $paginas));
         $inventario = array_slice($todos, ($pagina - 1) * $porPagina, $porPagina);
 
         return view('vista_admin.inventario', compact(
+            'inventario', 'resumen', 'buscar', 'estado', 'pagina', 'paginas', 'total'
+        ));
+    }
+
+    // ============================================================
+    // LISTADO — VENDEDOR (solo el inventario de SUS productos)
+    // ============================================================
+    public function vendedorIndex(Request $request)
+    {
+        $idUsuario = (int) (auth()->id() ?? 0);
+
+        $buscar = trim((string) $request->input('buscar', ''));
+        $estado = trim((string) $request->input('estado', ''));
+
+        // Requiere que Inventario::obtenerTodos() acepte un 4to
+        // parámetro opcional $idUsuario para filtrar por dueño del
+        // producto (mismo patrón que Producto::obtenerTodos($idUsuario)).
+        $todos   = Inventario::obtenerTodos($buscar, $estado, $idUsuario);
+        $resumen = Inventario::obtenerResumen($idUsuario);
+
+        $porPagina  = 5;
+        $total      = count($todos);
+        $paginas    = max(1, (int) ceil($total / $porPagina));
+        $pagina     = max(1, min((int) $request->input('pagina', 1), $paginas));
+        $inventario = array_slice($todos, ($pagina - 1) * $porPagina, $porPagina);
+
+        return view('vista_vendedor.inventario', compact(
             'inventario', 'resumen', 'buscar', 'estado', 'pagina', 'paginas', 'total'
         ));
     }
@@ -49,6 +80,15 @@ class InventarioController extends Controller
 
         if ($idProducto <= 0) {
             return $this->regresarConAlerta('error', 'Error', 'Producto no válido.');
+        }
+
+        // ── Verificación de propiedad para el panel vendedor ──
+        if ($this->esRutaVendedor()) {
+            $producto = Producto::obtenerPorId($idProducto);
+
+            if (!$producto || (int) ($producto['id_usuario'] ?? 0) !== (int) (auth()->id() ?? 0)) {
+                return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes actualizar el inventario de un producto que no es tuyo.');
+            }
         }
 
         if ($stockActual === '' || !is_numeric($stockActual)) {
@@ -77,14 +117,22 @@ class InventarioController extends Controller
     }
 
     // ============================================================
+    // ¿La petición actual llegó por una ruta del panel vendedor?
+    // ============================================================
+    private function esRutaVendedor(): bool
+    {
+        $nombreRuta = request()->route()?->getName() ?? '';
+
+        return str_starts_with($nombreRuta, 'vendedor.');
+    }
+
+    // ============================================================
     // Redirige según el rol del usuario autenticado, con alerta
     // flash (admin -> su panel, vendedor -> el suyo).
     // ============================================================
     private function regresarConAlerta(string $icon, string $title, string $text)
     {
-        $rol = strtolower(trim(optional(Auth::user())->rol ?? ''));
-
-        $ruta = $rol === 'vendedor' ? 'vendedor.inventario' : 'admin.inventario';
+        $ruta = $this->esRutaVendedor() ? 'vendedor.inventario' : 'admin.inventario';
 
         return redirect()->route($ruta)->with('alert', [
             'icon'  => $icon,

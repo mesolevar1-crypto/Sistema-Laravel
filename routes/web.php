@@ -414,8 +414,19 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/vendedor/categorias/{id}/editar', [ProductoController::class, 'updateCategoria'])->name('vendedor.categorias.update');
     Route::delete('/vendedor/categorias/{id}', [ProductoController::class, 'destroyCategoria'])->name('vendedor.categorias.destroy');
 });
+/*
+|--------------------------------------------------------------------------
+| INVENTARIO (Vendedor)
+| Mismo controlador que usa el admin; InventarioController valida que
+| el producto pertenezca al vendedor autenticado cuando la ruta
+| empieza por "vendedor.".
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
+    Route::post('/vendedor/inventario/{id}/actualizar', [InventarioController::class, 'actualizar'])->name('vendedor.inventario.actualizar');
+});
 Route::get('/vendedor/reporte', [ReporteController::class, 'vendedorIndex'])->name('vendedor.reporte');
 
 /*
