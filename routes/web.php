@@ -394,7 +394,27 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/vendedor/clientes/{id}', [ClienteController::class, 'destroy'])->name('vendedor.clientes.destroy');
 });
 
-Route::get('/vendedor/productos', [ProductoController::class, 'vendedorIndex'])->name('vendedor.productos');
+/*
+|--------------------------------------------------------------------------
+| PRODUCTOS Y CATEGORÍAS (Vendedor)
+| Mismos métodos del controlador que usa el admin; el propio
+| ProductoController valida que el producto pertenezca al vendedor
+| autenticado cuando la ruta empieza por "vendedor.".
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/vendedor/productos', [ProductoController::class, 'vendedorIndex'])->name('vendedor.productos');
+    Route::post('/vendedor/productos', [ProductoController::class, 'store'])->name('vendedor.productos.store');
+    Route::post('/vendedor/productos/{id}/editar', [ProductoController::class, 'update'])->name('vendedor.productos.update');
+    Route::post('/vendedor/productos/{id}/toggle', [ProductoController::class, 'toggleEstado'])->name('vendedor.productos.toggle');
+    Route::delete('/vendedor/productos/{id}', [ProductoController::class, 'destroy'])->name('vendedor.productos.destroy');
+
+    Route::post('/vendedor/categorias', [ProductoController::class, 'storeCategoria'])->name('vendedor.categorias.store');
+    Route::post('/vendedor/categorias/{id}/editar', [ProductoController::class, 'updateCategoria'])->name('vendedor.categorias.update');
+    Route::delete('/vendedor/categorias/{id}', [ProductoController::class, 'destroyCategoria'])->name('vendedor.categorias.destroy');
+});
+
 Route::get('/vendedor/inventario', [InventarioController::class, 'vendedorIndex'])->name('vendedor.inventario');
 Route::get('/vendedor/reporte', [ReporteController::class, 'vendedorIndex'])->name('vendedor.reporte');
 

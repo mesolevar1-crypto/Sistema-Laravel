@@ -10,19 +10,22 @@ use Illuminate\Support\Str;
 /**
  * Controlador de Producto.
  *
- * Equivalente al antiguo controllers/ProductoController.php, pero
- * dividido en acciones REST en vez de un switch por $_GET['accion'].
- * Incluye también las acciones de categorías, igual que el legacy.
+ * index()        -> Administrador: ve TODOS los productos.
+ * vendedorIndex() -> Vendedor: ve solo LOS SUYOS.
  *
- * Las imágenes se guardan en public/uploads/productos (igual que
- * en el proyecto legacy) para no depender de `php artisan storage:link`.
- * La columna `imagen` guarda la ruta relativa 'uploads/productos/archivo.ext',
- * igual que antes.
+ * store/update/toggleEstado/destroy son compartidos entre ambos
+ * paneles. Cuando la petición llega por una ruta "vendedor.*", se
+ * valida que el producto sobre el que se actúa le pertenezca al
+ * vendedor autenticado (mismo patrón usado en Venta/ClienteController).
+ *
+ * Las categorías NO tienen dueño (son un catálogo compartido), así
+ * que sus acciones no llevan validación de propiedad -- tanto admin
+ * como vendedor pueden gestionarlas, igual que en el legacy.
  */
 class ProductoController extends Controller
 {
     // ============================================================
-    // LISTADO
+    // LISTADO — ADMIN
     // ============================================================
     public function index()
     {
@@ -33,7 +36,22 @@ class ProductoController extends Controller
     }
 
     // ============================================================
+    // LISTADO — VENDEDOR (solo SUS propios productos)
+    // ============================================================
+    public function vendedorIndex()
+    {
+        $idUsuario = (int) (auth()->id() ?? 0);
+
+        $productos  = Producto::obtenerTodos($idUsuario);
+        $categorias = Producto::obtenerCategorias();
+
+        return view('vista_vendedor.productos', compact('productos', 'categorias'));
+    }
+
+    // ============================================================
     // REGISTRAR PRODUCTO
+    // Queda asociado a quien lo crea (admin o vendedor), así el
+    // filtro de "mis productos" del vendedor funciona.
     // ============================================================
     public function store(Request $request)
     {
@@ -63,11 +81,14 @@ class ProductoController extends Controller
             }
         }
 
+        $idUsuario = (int) (auth()->id() ?? 0);
+
         $resultado = Producto::registrar([
             'nombre'       => $nombre,
             'descripcion'  => $descripcion,
             'id_categoria' => $idCategoria,
             'imagen'       => $imagen,
+            'id_usuario'   => $idUsuario ?: null,
         ]);
 
         if (is_int($resultado) && $resultado > 0) {
@@ -92,6 +113,10 @@ class ProductoController extends Controller
 
         if (!$producto) {
             return $this->regresarConAlerta('error', 'Producto no encontrado', 'El producto que intentas editar no existe.');
+        }
+
+        if ($this->esRutaVendedor() && !$this->productoPerteneceAlVendedorActual($producto)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes editar un producto que no es tuyo.');
         }
 
         $nombre      = trim($request->input('nombre', ''));
@@ -162,6 +187,10 @@ class ProductoController extends Controller
             return $this->regresarConAlerta('error', 'Producto no encontrado', 'El producto que intentas actualizar no existe.');
         }
 
+        if ($this->esRutaVendedor() && !$this->productoPerteneceAlVendedorActual($producto)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes cambiar el estado de un producto que no es tuyo.');
+        }
+
         $resultado = Producto::toggleEstado($idProducto);
 
         if ($resultado === true) {
@@ -196,6 +225,10 @@ class ProductoController extends Controller
             return $this->regresarConAlerta('error', 'Producto no encontrado', 'El producto que intentas eliminar no existe.');
         }
 
+        if ($this->esRutaVendedor() && !$this->productoPerteneceAlVendedorActual($producto)) {
+            return $this->regresarConAlerta('error', 'Sin permiso', 'No puedes eliminar un producto que no es tuyo.');
+        }
+
         $resultado = Producto::eliminar($idProducto);
 
         if ($resultado === true) {
@@ -208,7 +241,7 @@ class ProductoController extends Controller
     }
 
     // ============================================================
-    // CATEGORÍAS: REGISTRAR
+    // CATEGORÍAS: REGISTRAR (compartidas, sin dueño)
     // ============================================================
     public function storeCategoria(Request $request)
     {
@@ -232,7 +265,7 @@ class ProductoController extends Controller
     }
 
     // ============================================================
-    // CATEGORÍAS: EDITAR
+    // CATEGORÍAS: EDITAR (compartidas, sin dueño)
     // ============================================================
     public function updateCategoria(Request $request, $id)
     {
@@ -261,7 +294,7 @@ class ProductoController extends Controller
     }
 
     // ============================================================
-    // CATEGORÍAS: ELIMINAR
+    // CATEGORÍAS: ELIMINAR (compartidas, sin dueño)
     // ============================================================
     public function destroyCategoria($id)
     {
@@ -281,9 +314,25 @@ class ProductoController extends Controller
     }
 
     // ============================================================
+    // ¿La petición actual llegó por una ruta del panel vendedor?
+    // ============================================================
+    private function esRutaVendedor(): bool
+    {
+        $nombreRuta = request()->route()?->getName() ?? '';
+
+        return str_starts_with($nombreRuta, 'vendedor.');
+    }
+
+    // ============================================================
+    // ¿El producto pertenece al vendedor autenticado?
+    // ============================================================
+    private function productoPerteneceAlVendedorActual(array $producto): bool
+    {
+        return (int) ($producto['id_usuario'] ?? 0) === (int) (auth()->id() ?? 0);
+    }
+
+    // ============================================================
     // GUARDAR IMAGEN
-    // Retorna la ruta relativa ('uploads/productos/archivo.ext'),
-    // null si no se envió archivo, o false si la imagen no es válida.
     // ============================================================
     private function guardarImagen(?UploadedFile $archivo)
     {
@@ -291,7 +340,6 @@ class ProductoController extends Controller
             return false;
         }
 
-        // Máximo 2 MB
         if ($archivo->getSize() > 2 * 1024 * 1024) {
             return false;
         }
@@ -327,11 +375,6 @@ class ProductoController extends Controller
 
     // ============================================================
     // ELIMINAR ARCHIVO DE IMAGEN DEL SERVIDOR (si aplica)
-    //
-    // $imagenAnterior: ruta relativa guardada en BD antes del cambio
-    // $imagenNueva: ruta relativa de la nueva imagen (para no borrarla
-    // por error si coinciden, aunque en la práctica nunca coinciden
-    // porque el nombre incluye timestamp + aleatorio).
     // ============================================================
     private function eliminarArchivoImagen(?string $imagenAnterior, ?string $imagenNueva): void
     {
@@ -352,8 +395,11 @@ class ProductoController extends Controller
     }
 
     // ============================================================
-    // Regresa a la página anterior con alerta flash (equivalente al
-    // HTTP_REFERER del controlador legacy).
+    // Regresa a la página anterior con alerta flash. Se usa back()
+    // en vez de un redirect por rol: como cada acción se dispara
+    // desde el propio formulario del panel activo (admin o
+    // vendedor), volver al referer ya respeta el panel correcto sin
+    // necesidad de adivinar la ruta de destino.
     // ============================================================
     private function regresarConAlerta(string $icon, string $title, string $text)
     {
