@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Venta;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
@@ -20,10 +21,11 @@ use Throwable;
  *
  * IMPORTANTE (seguridad de rol):
  * Todas las acciones que operan sobre una venta puntual (detalle,
- * anular, reactivar, factura) validan que, si la petición viene de
- * una ruta de vendedor, la venta le pertenezca a ESE vendedor. Así
- * un vendedor no puede ver ni tocar ventas de otros vendedores ni
- * del administrador, aunque cambie el ID en la URL a mano.
+ * anular, reactivar, factura, facturaPdf) validan que, si la
+ * petición viene de una ruta de vendedor, la venta le pertenezca a
+ * ESE vendedor. Así un vendedor no puede ver ni tocar ventas de
+ * otros vendedores ni del administrador, aunque cambie el ID en la
+ * URL a mano.
  */
 class VentaController extends Controller
 {
@@ -222,6 +224,28 @@ class VentaController extends Controller
     // ============================================================
     // COMPROBANTE / FACTURA
     // ============================================================
+    public function facturaJson($id): JsonResponse
+    {
+        $idVenta = (int) $id;
+
+        $venta = $idVenta > 0 ? Venta::obtenerVentaCompleta($idVenta) : null;
+
+        if (!$venta) {
+            return response()->json(['error' => 'Venta no encontrada.'], 404);
+        }
+
+        if ($this->esRutaVendedor() && (int) ($venta['id_usuario'] ?? 0) !== (int) auth()->id()) {
+            return response()->json(['error' => 'Sin permiso.'], 403);
+        }
+
+        $detalle = Venta::obtenerDetalle($idVenta);
+
+        return response()->json([
+            'venta'   => $venta,
+            'detalle' => $detalle,
+        ]);
+    }
+
     public function factura($id)
     {
         $idVenta = (int) $id;
@@ -240,6 +264,57 @@ class VentaController extends Controller
         $vista   = $this->esRutaVendedor() ? 'vista_vendedor.factura' : 'vista_admin.factura';
 
         return view($vista, compact('venta', 'detalle'));
+    }
+
+    // ============================================================
+    // COMPROBANTE EN PDF (descarga directa, sin pasar por el
+    // diálogo de impresión del navegador).
+    //
+    // Reutiliza exactamente los mismos datos que facturaJson/factura,
+    // así que el PDF sale idéntico al comprobante que ya se veía en
+    // el modal — solo cambia el "renderer" (dompdf en vez del navegador).
+    //
+    // El alto del papel se calcula según la cantidad de productos
+    // para que TODO el comprobante quede SIEMPRE en una sola página,
+    // sin importar si la venta tiene 1 o 20 productos.
+    // ============================================================
+    public function facturaPdf($id)
+    {
+        $idVenta = (int) $id;
+
+        $venta = $idVenta > 0 ? Venta::obtenerVentaCompleta($idVenta) : null;
+
+        if (!$venta) {
+            abort(404, 'Venta no encontrada.');
+        }
+
+        if ($this->esRutaVendedor() && (int) ($venta['id_usuario'] ?? 0) !== (int) auth()->id()) {
+            abort(403, 'No tienes permiso para ver esta factura.');
+        }
+
+        $detalle = Venta::obtenerDetalle($idVenta);
+
+        // Alto base: cabecera + franja + datos + totales + pie + margen
+        // de seguridad. Cada producto suma su propia fila a la tabla.
+        // (Se dejó un colchón amplio porque con el cálculo ajustado el
+        // pie de página se corría solo unos puntos y eso bastaba para
+        // que dompdf abriera una segunda hoja casi vacía.)
+        $alturaBase         = 660;
+        $alturaPorItem      = 36;
+        $colchonSeguridad   = 60;
+        $alturaExtraAnulada = $venta['estado'] ? 0 : 40;
+
+        $altoPagina = $alturaBase
+            + (count($detalle) * $alturaPorItem)
+            + $alturaExtraAnulada
+            + $colchonSeguridad;
+
+        $pdf = Pdf::loadView('vista_admin.comprobante_pdf', compact('venta', 'detalle'))
+            ->setPaper([0, 0, 420, $altoPagina], 'portrait'); // tarjeta espaciosa, una sola hoja
+
+        $numero = $venta['numero_factura'] ?? ('VENTA-' . $venta['id_venta']);
+
+        return $pdf->download("Comprobante_{$numero}.pdf");
     }
 
     // ============================================================

@@ -146,24 +146,7 @@
     .producto-info { padding: 14px; }
     .producto-cat  { font-size: 11px; color: #61D0A7; font-weight: bold; text-transform: uppercase; }
     .producto-info h3 { font-size: 15px; color: #171717; margin: 4px 0; }
-    .producto-precio  { font-size: 18px; font-weight: bold; color: #00875F; margin: 6px 0; }
-    .producto-unidad  { font-size: 12px; color: #5F6673; }
-
-    .disponible { font-size: 12px; color: #00875F; font-weight: bold; display: block; margin: 8px 0; }
-    .agotado    { font-size: 12px; color: #E53935; font-weight: bold; display: block; margin: 8px 0; }
-
-    .btn-carrito {
-      width: 100%; padding: 10px;
-      background: #00875F; color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 14px; font-weight: bold;
-      cursor: pointer; margin-top: 4px;
-      display: block; text-align: center;
-    }
-    .btn-carrito:hover { background: #01614B; }
-    .btn-carrito:disabled {
-      background: #E5E7EB; color: #5F6673; cursor: not-allowed;
-    }
+    .producto-desc { font-size: 13px; color: #5F6673; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 
     /* ════════════════════
@@ -311,14 +294,14 @@
       <?php
       // Lista de productos — aquí puedes agregar o quitar fácilmente
       $productos = [
-        ["nombre" => "Banano",       "categoria" => "Frutas",            "precio" => "$3.000", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&q=80"],
-        ["nombre" => "Manzana Roja", "categoria" => "Frutas",            "precio" => "$5.000", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&q=80"],
-        ["nombre" => "Zanahoria",    "categoria" => "Verduras",          "precio" => "$2.500", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80"],
-        ["nombre" => "Papa Criolla", "categoria" => "Verduras",          "precio" => "$3.500", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=80"],
-        ["nombre" => "Plátano",      "categoria" => "Frutas",            "precio" => "$4.000", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1614949941545-46b9fb8e2ac0?w=400&q=80"],
-        ["nombre" => "Tomate",       "categoria" => "Verduras",          "precio" => "$3.000", "unidad" => "kg",     "disponible" => true,  "img" => "https://images.unsplash.com/photo-1546094096-0df4bcaad337?w=400&q=80"],
-        ["nombre" => "Cebolla",      "categoria" => "Verduras",          "precio" => "$2.800", "unidad" => "kg",     "disponible" => false, "img" => "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400&q=80"],
-        ["nombre" => "Lechuga",      "categoria" => "Productos frescos", "precio" => "$2.000", "unidad" => "unidad", "disponible" => true,  "img" => "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&q=80"],
+        ["nombre" => "Banano",       "categoria" => "Frutas",            "descripcion" => "Bananos frescos de la región, dulces y nutritivos.",          "img" => "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&q=80"],
+        ["nombre" => "Manzana Roja", "categoria" => "Frutas",            "descripcion" => "Manzanas rojas crujientes con sabor dulce y textura firme.",    "img" => "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&q=80"],
+        ["nombre" => "Zanahoria",    "categoria" => "Verduras",          "descripcion" => "Zanahorias frescas, ideales para jugos y ensaladas.",           "img" => "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400&q=80"],
+        ["nombre" => "Papa Criolla", "categoria" => "Verduras",          "descripcion" => "Papa criolla de primera calidad, perfecta para sopas y guisos.","img" => "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=80"],
+        ["nombre" => "Plátano",      "categoria" => "Frutas",            "descripcion" => "Plátanos maduros y verdes, excelentes para cocinar o comer.",   "img" => "https://sembrandocali.org/wp-content/uploads/bb-plugin/cache/PLATANO-VERDE-square.jpg"],
+        ["nombre" => "Tomate",       "categoria" => "Verduras",          "descripcion" => "Tomates rojos maduros, ideales para salsas y ensaladas.",       "img" => "https://cdn.wikifarmer.com/images/detailed/2020/11/Cosas-que-no-sabias-del-tomate-%E2%80%93-Datos-Curiosos-Sobre-El-Tomate.jpg"],
+        ["nombre" => "Cebolla",      "categoria" => "Verduras",          "descripcion" => "Cebollas cabezonas frescas, base de gran variedad de recetas.", "img" => "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400&q=80"],
+        ["nombre" => "Lechuga",      "categoria" => "Productos frescos", "descripcion" => "Lechuga batavia fresca, crujiente y llena de vitaminas.",       "img" => "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&q=80"],
       ];
 
       // Recorremos el arreglo y mostramos cada tarjeta
@@ -329,15 +312,7 @@
         <div class="producto-info">
           <span class="producto-cat"><?= $p['categoria'] ?></span>
           <h3><?= $p['nombre'] ?></h3>
-          <p class="producto-precio"><?= $p['precio'] ?></p>
-          <span class="producto-unidad">por <?= $p['unidad'] ?></span>
-          <?php if ($p['disponible']): ?>
-            <span class="disponible">● Disponible</span>
-            <a href="../views/usuarios/login.php" class="btn-carrito">Comprar</a>
-          <?php else: ?>
-            <span class="agotado">● Agotado</span>
-            <button class="btn-carrito" disabled>Sin stock</button>
-          <?php endif; ?>
+          <p class="producto-desc"><?= $p['descripcion'] ?></p>
         </div>
       </div>
       <?php endforeach; ?>

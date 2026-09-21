@@ -78,6 +78,11 @@
         cursor: pointer;
         font-family: sans-serif;
         font-size: .85rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
     }
     .btn-imprimir:hover { background: #01614B; }
 
@@ -174,17 +179,23 @@
 
     </div>
 
-    <div class="acciones-comprobante">
-        <a href="{{ route('admin.ventas') }}" class="btn-volver">← Volver</a>
-        <button class="btn-imprimir" onclick="exportarPDF()">Exportar a PDF</button>
-    </div>
+    @php
+        // Esta misma vista se usa tanto para admin como para vendedor
+        // (VentaController::factura elige el blade, pero comparten
+        // este mismo layout). Elegimos la ruta "volver" y la ruta
+        // "descargar PDF" según cómo se llegó aquí, igual que hace
+        // esRutaVendedor() en el controlador.
+        $esVendedor = str_starts_with(request()->route()?->getName() ?? '', 'vendedor.');
+        $rutaVolver = $esVendedor ? route('vendedor.ventas') : route('admin.ventas');
+        $rutaPdf    = $esVendedor
+            ? route('vendedor.ventas.factura.pdf', $venta['id_venta'])
+            : route('admin.ventas.factura.pdf', $venta['id_venta']);
+    @endphp
 
-    <script>
-        function exportarPDF() {
-            document.title = "Comprobante_{{ $venta['numero_factura'] ?? ('VENTA-' . $venta['id_venta']) }}";
-            window.print();
-        }
-    </script>
+    <div class="acciones-comprobante">
+        <a href="{{ $rutaVolver }}" class="btn-volver">← Volver</a>
+        <a href="{{ $rutaPdf }}" class="btn-imprimir">⬇ Exportar a PDF</a>
+    </div>
 
 </body>
 </html>

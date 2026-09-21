@@ -373,9 +373,10 @@
                                     </button>
 
                                     <!-- VER FACTURA -->
-                                    <a href="{{ route('vendedor.ventas.factura', $v['id_venta']) }}" title="Ver factura" class="btn-accion-cuadro" style="color:#5F6673;">
+                                    <button type="button" onclick="verFactura({{ (int) $v['id_venta'] }})"
+                                        title="Ver factura" class="btn-accion-cuadro" style="color:#5F6673;">
                                         <i class="fas fa-file-invoice" style="font-size:.75rem;"></i>
-                                    </a>
+                                    </button>
 
                                     <!-- ANULAR / REACTIVAR según el estado actual -->
                                     @if ($activa)
@@ -642,6 +643,44 @@
             </button>
             <button type="button" onclick="confirmarReactivar()" class="btn-exito" style="padding:9px 24px;">
                 Sí, reactivar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL FACTURA
+============================================================ -->
+<div id="modalFactura" class="fixed inset-0 hidden z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.60);backdrop-filter:blur(4px);">
+    <div class="bg-white rounded-2xl w-full shadow-2xl modal-anim overflow-hidden" style="max-width:620px;max-height:94vh;display:flex;flex-direction:column;">
+
+        <!-- Cabecera -->
+        <div style="background:#01614B;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:11px;">
+                <div style="width:36px;height:36px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-file-invoice" style="color:#fff;font-size:.9rem;"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:1rem;font-weight:700;color:#fff;margin:0;" class="font-serif-ventanet">Comprobante de Venta</h3>
+                    <p id="facturaSubtitulo" style="font-size:.72rem;color:rgba(255,255,255,.65);margin:2px 0 0;"></p>
+                </div>
+            </div>
+            <button type="button" onclick="cerrarModal('modalFactura')" style="background:rgba(255,255,255,.15);border:none;cursor:pointer;color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo scrollable -->
+        <div id="facturaCuerpo" style="overflow-y:auto;flex:1;padding:24px 28px;background:#F0F4F0;">
+            <div style="text-align:center;padding:48px 0;">
+                <i class="fas fa-spinner fa-spin" style="color:#00875F;font-size:1.8rem;"></i>
+            </div>
+        </div>
+
+        <!-- Pie -->
+        <div style="background:#fff;border-top:1px solid #E5E7EB;padding:13px 22px;display:flex;justify-content:flex-end;gap:9px;flex-shrink:0;">
+            <button type="button" onclick="cerrarModal('modalFactura')" style="padding:8px 18px;border-radius:9px;border:1px solid #E5E7EB;background:#fff;color:#5F6673;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
+                Cerrar
             </button>
         </div>
     </div>
@@ -967,6 +1006,144 @@ function recalcularTotal() {
                 maximumFractionDigits: 2
             });
     }
+}
+
+// ============================================================
+// VER FACTURA
+// ============================================================
+var _facturaDataActual = null;
+var urlFacturaJsonBase = "{{ route('vendedor.ventas.factura.json', ['id' => 'ID_PLACEHOLDER']) }}";
+
+function verFactura(id) {
+    _facturaDataActual = null;
+    document.getElementById('facturaSubtitulo').textContent = 'Cargando...';
+    document.getElementById('facturaCuerpo').innerHTML =
+        '<div style="text-align:center;padding:48px 0;"><i class="fas fa-spinner fa-spin" style="color:#00875F;font-size:1.8rem;"></i></div>';
+    abrirModal('modalFactura');
+
+    fetch(urlFacturaJsonBase.replace('ID_PLACEHOLDER', id))
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function (data) {
+            if (data.error) throw new Error(data.error);
+            _facturaDataActual = data;
+            var v = data.venta;
+            document.getElementById('facturaSubtitulo').textContent =
+                (v.numero_factura || ('VENTA-' + v.id_venta)) + ' · ' +
+                (v.fecha ? new Date(v.fecha).toLocaleDateString('es-CO') : '');
+            document.getElementById('facturaCuerpo').innerHTML = renderFacturaModal(data);
+        })
+        .catch(function (err) {
+            document.getElementById('facturaSubtitulo').textContent = 'Error';
+            document.getElementById('facturaCuerpo').innerHTML =
+                '<p style="text-align:center;color:#E53935;padding:32px 0;">' +
+                    '<i class="fas fa-exclamation-circle" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>' +
+                    escapeHtml(err.message || 'No se pudo cargar la factura.') +
+                '</p>';
+        });
+}
+
+function renderFacturaModal(data) {
+    var v = data.venta;
+    var det = data.detalle || [];
+    var num = v.numero_factura || ('VENTA-' + v.id_venta);
+    var fecha = v.fecha ? new Date(v.fecha).toLocaleString('es-CO', { dateStyle:'short', timeStyle:'short' }) : '---';
+    var subtotalFact  = parseFloat(v.factura_subtotal  || v.total || 0);
+    var descuentoFact = parseFloat(v.factura_descuento || 0);
+    var total         = parseFloat(v.total || 0);
+    var anulada       = !v.estado;
+
+    var html =
+        '<div style="max-width:380px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.10);font-family:\'Outfit\',sans-serif;">' +
+
+        '<div style="background:linear-gradient(135deg,#01614B,#00875F);padding:22px 24px 16px;text-align:center;">' +
+            '<div style="width:52px;height:52px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">' +
+                '<i class="fas fa-store" style="color:#fff;font-size:1.3rem;"></i>' +
+            '</div>' +
+            '<p style="font-size:1.35rem;font-weight:900;color:#fff;letter-spacing:2px;margin:0;">VentaNet</p>' +
+            '<p style="font-size:.72rem;color:rgba(255,255,255,.7);margin:3px 0 0;">Sistema de gestión comercial</p>' +
+        '</div>' +
+
+        '<div style="background:#DDF5EC;border-bottom:1px dashed #61D0A7;padding:10px 22px;text-align:center;">' +
+            '<span style="font-size:.68rem;color:#01614B;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Comprobante</span>' +
+            '<p style="font-size:1rem;font-weight:800;color:#01614B;margin:2px 0 0;letter-spacing:1px;">' + escapeHtml(num) + '</p>' +
+        '</div>' +
+
+        '<div style="padding:16px 22px;border-bottom:1px dashed #E5E7EB;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+                _factItem('Fecha', fecha) +
+                _factItem('Venta N°', '#' + v.id_venta) +
+                _factItem('Cliente', escapeHtml(v.cliente || 'Cliente final')) +
+                _factItem('Atendió', escapeHtml(v.vendedor || '---')) +
+                _factItem('Pago', escapeHtml(v.metodo_pago ? v.metodo_pago.charAt(0).toUpperCase() + v.metodo_pago.slice(1) : 'Efectivo')) +
+            '</div>' +
+        '</div>' +
+
+        '<div style="padding:14px 22px 0;">' +
+            '<p style="font-size:.65rem;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Productos</p>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:.82rem;">' +
+                '<thead>' +
+                    '<tr style="border-bottom:1.5px solid #E5E7EB;">' +
+                        '<th style="text-align:left;padding:4px 0;color:#5F6673;font-weight:700;font-size:.72rem;">Producto</th>' +
+                        '<th style="text-align:center;padding:4px 0;color:#5F6673;font-weight:700;font-size:.72rem;">Cant.</th>' +
+                        '<th style="text-align:right;padding:4px 0;color:#5F6673;font-weight:700;font-size:.72rem;">Subtotal</th>' +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody>';
+
+    det.forEach(function (d) {
+        var descPct = parseFloat(d.descuento_porcentaje || 0);
+        html +=
+            '<tr style="border-bottom:1px solid #F3F4F6;">' +
+                '<td style="padding:7px 0;color:#171717;">' +
+                    '<span style="font-weight:600;">' + escapeHtml(d.producto || '') + '</span>' +
+                    '<br><span style="font-size:.7rem;color:#9CA3AF;">$' + Number(d.precio_venta).toLocaleString('es-CO') + ' c/u' +
+                    (descPct > 0 ? ' · Desc ' + descPct + '%' : '') + '</span>' +
+                '</td>' +
+                '<td style="padding:7px 0;text-align:center;color:#5F6673;">' + d.cantidad + '</td>' +
+                '<td style="padding:7px 0;text-align:right;font-weight:700;color:#00875F;">$' + Number(d.subtotal).toLocaleString('es-CO') + '</td>' +
+            '</tr>';
+    });
+
+    html +=
+            '</tbody></table>' +
+        '</div>' +
+
+        '<div style="padding:12px 22px;border-top:1px dashed #E5E7EB;margin-top:4px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:.82rem;color:#5F6673;margin-bottom:4px;">' +
+                '<span>Subtotal</span><span>$' + subtotalFact.toLocaleString('es-CO') + '</span>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:.82rem;color:#5F6673;margin-bottom:8px;">' +
+                '<span>Descuento</span><span>$' + descuentoFact.toLocaleString('es-CO') + '</span>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;background:#DDF5EC;border-radius:10px;padding:10px 14px;">' +
+                '<span style="font-size:.9rem;font-weight:700;color:#01614B;">TOTAL</span>' +
+                '<span style="font-size:1.4rem;font-weight:900;color:#00875F;">$' + total.toLocaleString('es-CO') + '</span>' +
+            '</div>' +
+        '</div>' +
+
+        (anulada ?
+            '<div style="margin:0 22px 12px;background:#fde8e8;border:2px solid #E53935;border-radius:10px;padding:8px;text-align:center;color:#E53935;font-weight:900;font-size:.85rem;letter-spacing:2px;">★ VENTA ANULADA ★</div>'
+        : '') +
+
+        '<div style="padding:14px 22px 20px;text-align:center;border-top:1px dashed #E5E7EB;">' +
+            '<p style="font-size:.75rem;color:#9CA3AF;line-height:1.6;margin:0;">' +
+                (anulada ? 'Esta venta fue anulada.' : '¡Gracias por su compra!') + '<br>Generado por VentaNet' +
+            '</p>' +
+        '</div>' +
+
+        '</div>';
+
+    return html;
+}
+
+function _factItem(label, value) {
+    return '<div>' +
+        '<p style="font-size:.65rem;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0 0 2px;">' + label + '</p>' +
+        '<p style="font-size:.82rem;color:#171717;font-weight:600;margin:0;">' + value + '</p>' +
+    '</div>';
 }
 
 // ============================================================

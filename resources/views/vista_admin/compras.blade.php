@@ -5,6 +5,9 @@
 @endphp
 @section('content')
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
 <style>
 .btn-primario {
     background:#00875F;
@@ -156,6 +159,36 @@
     .item-row-fila1, .item-row-fila2, .item-row-fila3 {
         grid-template-columns: 1fr;
     }
+}
+</style>
+
+<style>
+.choices { margin: 0; }
+.choices__inner {
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #fff;
+    color: #171717;
+    font-family: 'Outfit', sans-serif;
+    font-size: .9rem;
+}
+.is-focused .choices__inner,
+.is-open .choices__inner {
+    border-color: #61D0A7;
+    box-shadow: 0 0 0 4px rgba(97,208,167,.15);
+}
+.choices__list--dropdown {
+    z-index: 60;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    background: #fff;
+    color: #171717;
+}
+.choices__list--dropdown .choices__item--selectable.is-highlighted {
+    background: #DDF5EC;
+    color: #01614B;
 }
 </style>
 
@@ -536,6 +569,38 @@ var unidades = @json($unidades);
 var baseCompras = "{{ url('/admin/compras') }}";
 
 var filaCount = 0;
+var choicesProveedor = null;
+var choicesProductos = {};
+
+function inicializarChoicesProveedor() {
+    var select = document.getElementById('selectProveedor');
+    if (!select || choicesProveedor || typeof Choices === 'undefined') return;
+
+    choicesProveedor = new Choices(select, {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Buscar proveedor...',
+        itemSelectText: '',
+        shouldSort: false
+    });
+}
+
+function destruirChoicesProductos() {
+    Object.keys(choicesProductos).forEach(function (idx) {
+        if (choicesProductos[idx]) choicesProductos[idx].destroy();
+        delete choicesProductos[idx];
+    });
+}
+
+function inicializarChoicesProducto(selectEl, idx) {
+    if (!selectEl || typeof Choices === 'undefined') return;
+
+    choicesProductos[idx] = new Choices(selectEl, {
+        searchEnabled: true,
+        searchPlaceholderValue: 'Buscar producto...',
+        itemSelectText: '',
+        shouldSort: false
+    });
+}
 
 // ============================================================
 // GENERAR OPCIONES DE UNIDAD (catálogo `units`)
@@ -565,6 +630,7 @@ function cerrarModal(id) {
 
 function abrirModalNuevaCompra() {
     abrirModal('modalCrear');
+    inicializarChoicesProveedor();
     var filas = document.getElementById('filasProductos');
     if (filas && filas.children.length === 0) {
         agregarFila();
@@ -573,6 +639,11 @@ function abrirModalNuevaCompra() {
 
 function cerrarModalCrear() {
     cerrarModal('modalCrear');
+    destruirChoicesProductos();
+    if (choicesProveedor) {
+        choicesProveedor.destroy();
+        choicesProveedor = null;
+    }
     var filas = document.getElementById('filasProductos');
     if (filas) filas.innerHTML = '';
     var proveedor = document.getElementById('selectProveedor');
@@ -621,6 +692,11 @@ function filtrarProductosPorProveedor() {
 function reconstruirOpcionesProducto(selectEl, idProveedor, idx) {
     if (!selectEl) return;
 
+    if (choicesProductos[idx]) {
+        choicesProductos[idx].destroy();
+        delete choicesProductos[idx];
+    }
+
     var valorActual = selectEl.value;
     selectEl.innerHTML = '<option value="">Seleccionar producto</option>';
 
@@ -638,6 +714,7 @@ function reconstruirOpcionesProducto(selectEl, idProveedor, idx) {
 
     if (valorActual) selectEl.value = valorActual;
     onProductoChange(idx);
+    inicializarChoicesProducto(selectEl, idx);
 }
 
 // ============================================================
@@ -761,6 +838,10 @@ function agregarFila() {
 function quitarFila(idx) {
     var el = document.getElementById('fila-' + idx);
     if (el) {
+        if (choicesProductos[idx]) {
+            choicesProductos[idx].destroy();
+            delete choicesProductos[idx];
+        }
         el.remove();
         recalcularTotal();
     }

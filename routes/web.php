@@ -169,6 +169,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/ventas/{id}/anular', [VentaController::class, 'anular'])->name('admin.ventas.anular');
     Route::post('/admin/ventas/{id}/reactivar', [VentaController::class, 'reactivar'])->name('admin.ventas.reactivar');
     Route::get('/admin/ventas/{id}/factura', [VentaController::class, 'factura'])->name('admin.ventas.factura');
+    Route::get('/admin/ventas/{id}/factura-json', [VentaController::class, 'facturaJson'])->name('admin.ventas.factura.json');
+    Route::get('/admin/ventas/{id}/factura-pdf', [VentaController::class, 'facturaPdf'])->name('admin.ventas.factura.pdf');
 });
 
 // Alias legado: si algo en el proyecto aún enlaza a /ventas (nombre
@@ -382,6 +384,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/vendedor/ventas/{id}/anular', [VentaController::class, 'anular'])->name('vendedor.ventas.anular');
     Route::post('/vendedor/ventas/{id}/reactivar', [VentaController::class, 'reactivar'])->name('vendedor.ventas.reactivar');
     Route::get('/vendedor/ventas/{id}/factura', [VentaController::class, 'factura'])->name('vendedor.ventas.factura');
+    Route::get('/vendedor/ventas/{id}/factura-json', [VentaController::class, 'facturaJson'])->name('vendedor.ventas.factura.json');
+    Route::get('/vendedor/ventas/{id}/factura-pdf', [VentaController::class, 'facturaPdf'])->name('vendedor.ventas.factura.pdf');
 });
 
 // CLIENTES (Vendedor) — antes solo existía el listado; se agregan
