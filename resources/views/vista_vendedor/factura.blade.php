@@ -78,6 +78,12 @@
         cursor: pointer;
         font-family: sans-serif;
         font-size: .85rem;
+        text-decoration: none;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
     }
     .btn-imprimir:hover { background: #01614B; }
 
@@ -174,17 +180,14 @@
 
     </div>
 
+    {{-- Antes este botón llamaba a exportarPDF() -> window.print() (el
+         diálogo de impresión del navegador). Ahora usa el mismo enlace
+         real de descarga de PDF que ya usa vista_admin/factura.blade.php,
+         apuntando a la ruta PDF del vendedor. --}}
     <div class="acciones-comprobante">
         <a href="{{ route('vendedor.ventas') }}" class="btn-volver">← Volver</a>
-        <button class="btn-imprimir" onclick="exportarPDF()">Exportar a PDF</button>
+        <a href="{{ route('vendedor.ventas.factura.pdf', $venta['id_venta']) }}" class="btn-imprimir">⬇ Exportar a PDF</a>
     </div>
-
-    <script>
-        function exportarPDF() {
-            document.title = "Comprobante_{{ $venta['numero_factura'] ?? ('VENTA-' . $venta['id_venta']) }}";
-            window.print();
-        }
-    </script>
 
 </body>
 </html>

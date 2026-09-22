@@ -78,6 +78,17 @@
     transition: background .15s, transform .15s;
 }
 .btn-accion-cuadro:hover { transform:translateY(-2px); }
+/* --- combo buscable (cliente / producto) --- */
+.combo-lista {
+    position:absolute; top:100%; left:0; right:0; background:#fff;
+    border:1.5px solid #E5E7EB; border-radius:10px; margin-top:4px;
+    max-height:220px; overflow-y:auto; z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,.10); display:none;
+}
+.combo-item { padding:9px 12px; font-size:.87rem; cursor:pointer; color:#171717; }
+.combo-item:hover, .combo-item.activo { background:#DDF5EC; }
+.combo-item.deshabilitado { color:#9CA3AF; cursor:not-allowed; }
+.combo-vacio { padding:12px; text-align:center; color:#9CA3AF; font-size:.82rem; }
 @media (max-width:900px) {
     .item-row-fila1, .item-row-fila2, .item-row-fila3 { grid-template-columns: 1fr; }
 }
@@ -294,7 +305,7 @@
                 <div>
                     <h3 class="font-serif-ventanet" style="font-size:1.1rem;color:#171717;">Nueva Venta</h3>
                     <p style="font-size:.75rem;color:#5F6673;margin-top:2px;">
-                        Selecciona un cliente activo, luego el producto, y escribe el precio, la cantidad, el descuento (si aplica) y la unidad de venta.
+                        Busca un cliente activo, luego busca el producto, y escribe el precio, la cantidad, el descuento (si aplica) y la unidad de venta.
                     </p>
                 </div>
             </div>
@@ -316,14 +327,11 @@
                             No hay clientes activos disponibles. Registra o activa un cliente primero.
                         </div>
                     @else
-                        <div style="position:relative;">
-                            <select id="selectCliente" name="id_cliente" required class="campo-input" style="appearance:none;cursor:pointer;padding-right:36px;">
-                                <option value="">Selecciona un cliente</option>
-                                @foreach ($clientes as $cl)
-                                    <option value="{{ (int) $cl['id_cliente'] }}">{{ $cl['nombre'] ?? 'Cliente' }}</option>
-                                @endforeach
-                            </select>
-                            <i class="fas fa-chevron-down" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#00875F;font-size:.75rem;pointer-events:none;"></i>
+                        <div id="wrapCliente" style="position:relative;">
+                            <input type="text" id="buscarCliente" class="campo-input"
+                                placeholder="Buscar cliente por nombre..." autocomplete="off">
+                            <input type="hidden" id="selectCliente" name="id_cliente" required>
+                            <div id="listaClientes" class="combo-lista"></div>
                         </div>
                     @endif
                 </div>
@@ -502,10 +510,98 @@
 
 <script>
 // ============================================================
+// COMBO BUSCABLE (autocompletado) - reutilizable para cliente y producto
+// ============================================================
+function initCombo(config) {
+    var input   = document.getElementById(config.inputId);
+    var hidden  = document.getElementById(config.hiddenId);
+    var lista   = document.getElementById(config.listId);
+    var wrapper = document.getElementById(config.wrapperId);
+    if (!input || !hidden || !lista || !wrapper) return null;
+
+    var datos = config.datos || [];
+    var itemsVisibles = [];
+    var indiceActivo = -1;
+
+    function render(filtro) {
+        var texto = (filtro || '').toLowerCase().trim();
+        itemsVisibles = datos.filter(function (d) {
+            return config.getLabel(d).toLowerCase().indexOf(texto) !== -1;
+        });
+        indiceActivo = -1;
+
+        if (itemsVisibles.length === 0) {
+            lista.innerHTML = '<div class="combo-vacio">' + (config.placeholderVacio || 'Sin resultados') + '</div>';
+        } else {
+            lista.innerHTML = itemsVisibles.map(function (d, i) {
+                var deshabilitado = config.getDisabled ? config.getDisabled(d) : false;
+                return '<div class="combo-item' + (deshabilitado ? ' deshabilitado' : '') + '" data-idx="' + i + '">' +
+                    escapeHtml(config.getLabel(d)) + '</div>';
+            }).join('');
+        }
+        lista.style.display = 'block';
+    }
+
+    function marcarActivo(items) {
+        items.forEach(function (it) { it.classList.remove('activo'); });
+        if (items[indiceActivo]) {
+            items[indiceActivo].classList.add('activo');
+            items[indiceActivo].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    input.addEventListener('focus', function () { render(input.value); });
+
+    input.addEventListener('input', function () {
+        hidden.value = '';
+        render(input.value);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        var items = lista.querySelectorAll('.combo-item:not(.deshabilitado)');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            indiceActivo = Math.min(indiceActivo + 1, items.length - 1);
+            marcarActivo(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            indiceActivo = Math.max(indiceActivo - 1, 0);
+            marcarActivo(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (indiceActivo >= 0 && items[indiceActivo]) items[indiceActivo].click();
+        } else if (e.key === 'Escape') {
+            lista.style.display = 'none';
+        }
+    });
+
+    lista.addEventListener('click', function (e) {
+        var item = e.target.closest('.combo-item');
+        if (!item || item.classList.contains('deshabilitado')) return;
+        var idx = Number(item.dataset.idx);
+        var d = itemsVisibles[idx];
+        if (!d) return;
+        input.value = config.getLabel(d);
+        hidden.value = config.getValue(d);
+        lista.style.display = 'none';
+        if (config.onSelect) config.onSelect(d);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!wrapper.contains(e.target)) lista.style.display = 'none';
+    });
+
+    return {
+        limpiar: function () { input.value = ''; hidden.value = ''; }
+    };
+}
+
+// ============================================================
 // DATOS DESDE PHP (vía Blade)
 // ============================================================
 var productos = @json($productos);
 var unidades = @json($unidades);
+var clientesData = @json($clientes);
 
 var baseVentas = "{{ url('/admin/ventas') }}";
 
@@ -530,6 +626,18 @@ function cerrarModal(id) {
     if (el) el.classList.add('hidden');
 }
 
+// Combo de cliente (se inicializa una sola vez; el bloque solo existe si hay clientes)
+var comboCliente = initCombo({
+    wrapperId: 'wrapCliente',
+    inputId: 'buscarCliente',
+    hiddenId: 'selectCliente',
+    listId: 'listaClientes',
+    datos: clientesData,
+    getLabel: function (c) { return c.nombre || 'Cliente'; },
+    getValue: function (c) { return c.id_cliente; },
+    placeholderVacio: 'No se encontraron clientes'
+});
+
 function abrirModalNuevaVenta() {
     abrirModal('modalCrear');
     var filas = document.getElementById('filasProductos');
@@ -542,8 +650,7 @@ function cerrarModalCrear() {
     cerrarModal('modalCrear');
     var filas = document.getElementById('filasProductos');
     if (filas) filas.innerHTML = '';
-    var cliente = document.getElementById('selectCliente');
-    if (cliente) cliente.value = '';
+    if (comboCliente) comboCliente.limpiar();
     var total = document.getElementById('totalVenta');
     if (total) total.textContent = '$0';
     filaCount = 0;
@@ -580,37 +687,6 @@ function confirmarReactivar() {
 }
 
 // ============================================================
-// RECONSTRUIR OPCIONES DE PRODUCTO (con stock disponible)
-// ============================================================
-function reconstruirOpcionesProducto(selectEl, idx) {
-    if (!selectEl) return;
-
-    var valorActual = selectEl.value;
-    selectEl.innerHTML = '<option value="">Seleccionar producto</option>';
-
-    productos.forEach(function (p) {
-        var stock = parseInt(p.stock) || 0;
-        var option = document.createElement('option');
-        option.value = p.id_producto;
-        option.dataset.stock = stock;
-
-        var texto = p.nombre || 'Producto';
-        if (stock <= 0) {
-            texto += ' — SIN STOCK';
-            option.disabled = true;
-        } else {
-            texto += ' [' + stock + ' disp.]';
-        }
-        option.textContent = texto;
-
-        selectEl.appendChild(option);
-    });
-
-    if (valorActual) selectEl.value = valorActual;
-    onProductoChange(idx);
-}
-
-// ============================================================
 // AGREGAR FILA
 // ============================================================
 function agregarFila() {
@@ -624,12 +700,12 @@ function agregarFila() {
         '<div>' +
             '<p class="item-row-seccion">Qué vendes</p>' +
             '<div class="item-row-fila1">' +
-                '<div>' +
+                '<div id="wrapProducto-' + idx + '" style="position:relative;">' +
                     '<span class="item-row-label">Producto</span>' +
-                    '<select class="campo-input select-producto" name="id_producto[]" data-idx="' + idx + '" required ' +
-                        'onchange="onProductoChange(' + idx + ')">' +
-                        '<option value="">Seleccionar producto</option>' +
-                    '</select>' +
+                    '<input type="text" class="campo-input" id="buscarProducto-' + idx + '" ' +
+                        'placeholder="Buscar producto..." autocomplete="off">' +
+                    '<input type="hidden" name="id_producto[]" id="producto-' + idx + '" required>' +
+                    '<div class="combo-lista" id="listaProducto-' + idx + '"></div>' +
                     '<p class="item-row-ayuda">El producto que le estás vendiendo al cliente.</p>' +
                 '</div>' +
                 '<div>' +
@@ -700,8 +776,21 @@ function agregarFila() {
 
     container.appendChild(div);
 
-    var select = div.querySelector('.select-producto');
-    reconstruirOpcionesProducto(select, idx);
+    initCombo({
+        wrapperId: 'wrapProducto-' + idx,
+        inputId: 'buscarProducto-' + idx,
+        hiddenId: 'producto-' + idx,
+        listId: 'listaProducto-' + idx,
+        datos: productos,
+        getLabel: function (p) {
+            var stock = parseInt(p.stock) || 0;
+            return (p.nombre || 'Producto') + (stock <= 0 ? ' — SIN STOCK' : ' [' + stock + ' disp.]');
+        },
+        getValue: function (p) { return p.id_producto; },
+        getDisabled: function (p) { return (parseInt(p.stock) || 0) <= 0; },
+        placeholderVacio: 'No se encontraron productos',
+        onSelect: function () { onProductoChange(idx); }
+    });
 }
 
 function quitarFila(idx) {
@@ -1036,7 +1125,7 @@ document.getElementById('formVenta')?.addEventListener('submit', function (event
 
     filas.forEach(function (fila) {
         var idx = fila.id.replace('fila-', '');
-        var select = fila.querySelector('.select-producto');
+        var productoInput = document.getElementById('producto-' + idx);
         var cantidadInput = document.getElementById('cant-' + idx);
         var precioInput = document.getElementById('precio-' + idx);
         var descuentoInput = document.getElementById('desc-' + idx);
@@ -1044,7 +1133,7 @@ document.getElementById('formVenta')?.addEventListener('submit', function (event
         var cpuInput = document.getElementById('cpu-' + idx);
         var unidadContenidoSelect = document.getElementById('unidadcontenido-' + idx);
 
-        if (!select || !select.value) {
+        if (!productoInput || !productoInput.value) {
             valido = false; mensaje = 'Selecciona un producto en todas las filas.'; return;
         }
 
