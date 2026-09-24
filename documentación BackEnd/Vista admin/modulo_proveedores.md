@@ -1,4 +1,4 @@
-# Módulo de Proveedores — Vista del Administrador
+ Módulo de Proveedores — Vista del Administrador
 
 **Archivos involucrados:**
 - Vista: `resources/views/vista_admin/proveedores.blade.php`
@@ -9,13 +9,13 @@
 
 ---
 
-## ¿Qué es este módulo?
+¿Qué es este módulo?
 
 Permite gestionar los proveedores del negocio. Solo existe en el panel del administrador — los vendedores no tienen acceso. Los proveedores activos son los que aparecen disponibles al registrar una compra.
 
 ---
 
-## Rutas
+ Rutas
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -27,7 +27,7 @@ Permite gestionar los proveedores del negocio. Solo existe en el panel del admin
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\proveedor` — métodos estáticos con SQL directo:
 
@@ -42,7 +42,7 @@ Permite gestionar los proveedores del negocio. Solo existe en el panel del admin
 
 ---
 
-## Datos que recibe la vista
+ Datos que recibe la vista
 
 | Variable | Contenido |
 |----------|-----------|
@@ -53,7 +53,7 @@ Permite gestionar los proveedores del negocio. Solo existe en el panel del admin
 
 ---
 
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
 Tabla con todos los proveedores:
 
@@ -68,15 +68,15 @@ Tabla con todos los proveedores:
 
 ---
 
-## Acción 1: Registrar proveedor
+ Acción 1: Registrar proveedor
 
-### Campos del formulario
+ Campos del formulario
 - Nombre / Empresa (obligatorio)
 - Teléfono (opcional)
 - Correo electrónico (opcional; si se ingresa debe tener formato válido)
 - Frecuencia de entrega (opcional, texto libre: "Semanal", "Mensual", etc.)
 
-### Validaciones en el controlador
+ Validaciones en el controlador
 
 | Validación | Error si falla |
 |-----------|----------------|
@@ -85,31 +85,31 @@ Tabla con todos los proveedores:
 
 ---
 
-## Acción 2: Editar proveedor
+Acción 2: Editar proveedor
 
 Todos los campos son editables: nombre, teléfono, correo y frecuencia de entrega.
 
 ---
 
-## Acción 3: Activar / Desactivar
+Acción 3: Activar / Desactivar
 
 Un proveedor inactivo **no aparece en el select** al registrar una compra.
 
 ---
 
-## Acción 4: Eliminar
+Acción 4: Eliminar
 
 ⚠️ No se puede deshacer. Si el proveedor tiene compras asociadas, la eliminación puede fallar por clave foránea.
 
 ---
 
-## Sistema de alertas
+Sistema de alertas
 
 `ProveedorController@regresarConAlerta` redirige a `admin.proveedores` con `session('alert')`. La vista lanza `Swal.fire()`.
 
 ---
 
-## Flujo completo
+Flujo completo
 
 ```
 GET /admin/proveedores → ProveedorController@index

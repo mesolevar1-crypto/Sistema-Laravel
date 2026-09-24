@@ -1,6 +1,6 @@
-# Módulo de Compras — Vista del Administrador
+ Módulo de Compras — Vista del Administrador
 
-**Archivos involucrados:**
+Archivos involucrados:
 - Vista: `resources/views/vista_admin/compras.blade.php`
 - Controlador: `app/Http/Controllers/CompraController.php`
 - Modelo: `app/Models/compra.php`
@@ -9,13 +9,11 @@
 
 ---
 
-## ¿Qué es este módulo?
+ ¿Qué es este módulo?
 
 Permite al administrador registrar las compras realizadas a los proveedores. **Cada vez que se registra una compra, el stock de los productos comprados sube automáticamente** (el modelo lo hace dentro de una transacción). Solo existe en el panel del administrador.
 
----
-
-## Rutas
+ Rutas
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -26,7 +24,7 @@ Permite al administrador registrar las compras realizadas a los proveedores. **C
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\compra` — métodos estáticos con SQL directo:
 
@@ -41,9 +39,8 @@ Permite al administrador registrar las compras realizadas a los proveedores. **C
 | `registrar($idUsuario, $idProveedor, $items)` | INSERT compra + detalles + UPDATE stock (transacción) |
 | `eliminar($id)` | DELETE detalles + DELETE compra (transacción) |
 
----
 
-## Datos que recibe la vista
+ Datos que recibe la vista
 
 | Variable | Contenido |
 |----------|-----------|
@@ -56,9 +53,9 @@ Permite al administrador registrar las compras realizadas a los proveedores. **C
 
 ---
 
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
-**4 tarjetas KPI:**
+4 tarjetas KPI:
 
 | Tarjeta | Qué muestra |
 |---------|-------------|
@@ -67,14 +64,14 @@ Permite al administrador registrar las compras realizadas a los proveedores. **C
 | Compras Hoy | Cuántas compras se hicieron hoy |
 | Gasto Hoy | Cuánto se gastó hoy |
 
-**Tabla de compras:** fecha, proveedor, registrado por, total, acciones (ojo para detalle, basura para eliminar).
+Tabla de compras:fecha, proveedor, registrado por, total, acciones (ojo para detalle, basura para eliminar).
 
----
 
-## Acción 1: Registrar compra
 
-### ¿Qué hace el usuario?
-1. Selecciona un **proveedor activo**
+ Acción 1: Registrar compra
+
+¿Qué hace el usuario?
+1. Selecciona un PROVEEDOR ACTIVO
 2. Agrega filas de productos — cada fila tiene:
    - Producto (select)
    - Cantidad (número entero)
@@ -84,9 +81,9 @@ Permite al administrador registrar las compras realizadas a los proveedores. **C
    - Unidad de contenido (kg, litro, unidad, etc.)
 3. Confirma la compra
 
-### Validaciones del controlador
+ Validaciones del controlador
 
-El controlador valida **cada fila** antes de enviar al modelo:
+El controlador valida CADA FILA antes de enviar al modelo:
 
 | Validación | Error si falla |
 |-----------|----------------|
@@ -98,7 +95,7 @@ El controlador valida **cada fila** antes de enviar al modelo:
 | Contenido por unidad > 0 | "Debes indicar cuánto contenido trae cada presentación." |
 | Unidad de contenido seleccionada | "Debes seleccionar en qué unidad se mide el contenido." |
 
-### ¿Cómo se guarda? (Transacción de 3 pasos)
+ ¿Cómo se guarda? (Transacción de 3 pasos)
 
 ```
 Paso 1: INSERT INTO purchases (fecha, total, id_usuario, id_proveedor)
@@ -119,23 +116,23 @@ El controlador **nunca confía en precios calculados desde el navegador** — so
 
 ---
 
-## Acción 2: Ver detalle de una compra
+ Acción 2: Ver detalle de una compra
 
-El JavaScript hace `fetch` a `/admin/compras/{id}/detalle`. El controlador responde con **JSON** de los productos de esa compra. El JS construye el HTML del modal con esa información.
+El JavaScript hace `fetch` a `/admin/compras/{id}/detalle`. El controlador responde con JSON de los productos de esa compra. El JS construye el HTML del modal con esa información.
 
 ---
 
-## Acción 3: Eliminar compra
+Acción 3: Eliminar compra
 
 ⚠️ No se puede deshacer. El modelo elimina en transacción:
 1. DELETE detalles de la compra
 2. DELETE encabezado de la compra
 
-**El stock NO se revierte al eliminar una compra.**
+El stock NO se revierte al eliminar una compra.
 
 ---
 
-## JavaScript de la vista
+ JavaScript de la vista
 
 | Función | Qué hace |
 |---------|----------|
@@ -148,13 +145,13 @@ El JavaScript hace `fetch` a `/admin/compras/{id}/detalle`. El controlador respo
 
 ---
 
-## Sistema de alertas
+ Sistema de alertas
 
 `CompraController@regresarConAlerta` redirige siempre a `admin.compras` con `session('alert')`. La vista lanza `Swal.fire()`.
 
 ---
 
-## Flujo completo
+Flujo completo
 
 ```
 GET /admin/compras → CompraController@index

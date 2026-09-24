@@ -1,4 +1,4 @@
-# Módulo de Productos — Vista del Administrador
+ Módulo de Productos — Vista del Administrador
 
 **Archivos involucrados:**
 - Vista: `resources/views/vista_admin/productos.blade.php`
@@ -9,13 +9,13 @@
 
 ---
 
-## ¿Qué es este módulo?
+ ¿Qué es este módulo?
 
 Permite gestionar el catálogo de productos del negocio. El administrador ve y gestiona **todos** los productos del sistema (de todos los vendedores). También permite gestionar las categorías de productos desde el mismo módulo.
 
 ---
 
-## Rutas — Productos
+ Rutas — Productos
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -25,7 +25,8 @@ Permite gestionar el catálogo de productos del negocio. El administrador ve y g
 | Toggle estado | POST | `/admin/productos/{id}/toggle` | `admin.productos.toggle` | `ProductoController@toggleEstado` |
 | Eliminar | DELETE | `/admin/productos/{id}` | `admin.productos.destroy` | `ProductoController@destroy` |
 
-## Rutas — Categorías (gestionadas desde el mismo módulo)
+
+ Rutas — Categorías (gestionadas desde el mismo módulo)
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -35,7 +36,7 @@ Permite gestionar el catálogo de productos del negocio. El administrador ve y g
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\producto` — métodos estáticos:
 
@@ -56,7 +57,7 @@ Permite gestionar el catálogo de productos del negocio. El administrador ve y g
 
 ---
 
-## Datos que recibe la vista
+ Datos que recibe la vista
 
 | Variable | Contenido |
 |----------|-----------|
@@ -65,7 +66,7 @@ Permite gestionar el catálogo de productos del negocio. El administrador ve y g
 
 ---
 
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
 **Encabezado** con botones "Agregar Categorías" y "Nuevo Producto".
 
@@ -83,7 +84,7 @@ Permite gestionar el catálogo de productos del negocio. El administrador ve y g
 
 ---
 
-## Asignación automática de colores por categoría
+ Asignación automática de colores por categoría
 
 Las tarjetas usan una paleta de 8 colores. El color se asigna con:
 
@@ -95,53 +96,53 @@ Esto es **puramente visual** — no se guarda en la base de datos. Cada categor�
 
 ---
 
-## Acción 1: Crear producto
+ Acción 1: Crear producto
 
-### Campos del formulario
+Campos del formulario
 - Nombre (obligatorio, único)
 - Descripción (opcional)
 - Categoría (obligatorio, debe existir)
 - Imagen (opcional, subida de archivo — JPG, PNG, GIF, WEBP, máx. 2MB)
 
-### ¿Cómo se guarda la imagen?
+ ¿Cómo se guarda la imagen?
 El controlador guarda el archivo en `public/uploads/productos/` con nombre único (`producto_YmdHis_random.ext`). La ruta relativa se guarda en la base de datos. El modelo `Asset` de Laravel sirve la imagen con `asset($producto['imagen'])`.
 
-### ¿Quién es el dueño del producto?
+ ¿Quién es el dueño del producto?
 El producto queda asociado al `auth()->id()` del usuario que lo crea. Esto permite al vendedor filtrar "sus productos".
 
 ---
 
-## Acción 2: Editar producto
+ Acción 2: Editar producto
 
 Al editar, si se sube una nueva imagen el controlador elimina la imagen anterior del servidor (solo si es un archivo local en `uploads/productos/`).
 
 ---
 
-## Acción 3: Activar / Desactivar
+ Acción 3: Activar / Desactivar
 
 Un producto inactivo **no aparece en el select de ventas** ni de compras. El modelo `Venta::obtenerProductosDisponibles()` filtra por `estado = 1`.
 
 ---
 
-## Acción 4: Eliminar
+ Acción 4: Eliminar
 
 ⚠️ No se puede deshacer. El controlador también elimina el archivo de imagen del servidor si existe.
 
 ---
 
-## Gestión de categorías
+ Gestión de categorías
 
 Las categorías son **compartidas** — no tienen dueño. Tanto admin como vendedor pueden crearlas, editarlas y eliminarlas. No se puede eliminar una categoría si tiene productos asociados (el modelo lo verifica y devuelve el error).
 
 ---
 
-## Sistema de alertas
+ Sistema de alertas
 
 `ProductoController@regresarConAlerta` usa `back()->with('alert', [...])` (no redirige a una ruta específica sino que vuelve a la página anterior). La vista lanza `Swal.fire()`.
 
 ---
 
-## JavaScript de la vista
+ JavaScript de la vista
 
 | Función | Qué hace |
 |---------|----------|
@@ -158,7 +159,7 @@ Las categorías son **compartidas** — no tienen dueño. Tanto admin como vende
 
 ---
 
-## Flujo completo
+ Flujo completo
 
 ```
 GET /admin/productos → ProductoController@index

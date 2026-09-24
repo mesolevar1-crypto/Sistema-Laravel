@@ -1,4 +1,4 @@
-# Módulo de Inicio — Administrador
+ Módulo de Inicio — Administrador
 
 **Archivos involucrados:**
 - Vista: `resources/views/vista_admin/inicio.blade.php`
@@ -8,13 +8,13 @@
 
 ---
 
-## ¿Qué es este módulo?
+ ¿Qué es este módulo?
 
 Es la **pantalla principal del administrador** al iniciar sesión. Muestra un resumen visual del estado del negocio: ventas del día, ingresos, stock crítico, productos más vendidos y comportamiento de ventas de los últimos 7 días.
 
 ---
 
-## Ruta y acceso
+ Ruta y acceso
 
 | Método | URL | Nombre | Controlador |
 |--------|-----|--------|-------------|
@@ -26,7 +26,7 @@ La ruta usa el middleware `auth`. Si el usuario no está autenticado, Laravel lo
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\inicio` — conecta a la base de datos y ejecuta las consultas de KPIs y rankings.
 
@@ -36,9 +36,9 @@ La vista del admin siempre llama los métodos sin filtro de usuario para ver tod
 
 ---
 
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
-### Tarjetas KPI
+ Tarjetas KPI
 
 | Tarjeta | Método del modelo | Qué muestra |
 |---------|------------------|-------------|
@@ -49,13 +49,13 @@ La vista del admin siempre llama los métodos sin filtro de usuario para ver tod
 | Total productos | `totalProductos()` | Productos activos (`estado = 1`) |
 | Usuarios activos | `totalUsuarios()` | Usuarios con `estado = 1` |
 
-### Análisis de ventas (últimos 7 días)
+Análisis de ventas (últimos 7 días)
 
 Gráfico de barras generado con **Chart.js** usando los datos de `ventasUltimos7Dias()`. El modelo devuelve un arreglo por fecha; los días sin ventas se rellenan con `0` para que siempre aparezcan los 7 días completos.
 
 Las fechas se transforman de `YYYY-MM-DD` a formato legible: `Vie 21`.
 
-### Productos más vendidos
+Productos más vendidos
 
 Lista con los 5 productos de mayor cantidad vendida. Usa `productosMasVendidos(5)` que agrupa por producto y ordena por `SUM(cantidad) DESC LIMIT 5`.
 
@@ -63,7 +63,7 @@ Si no hay ventas registradas, muestra un mensaje: *"Sin ventas registradas aún"
 
 ---
 
-## Datos que usa de la base de datos
+Datos que usa de la base de datos
 
 | Tabla | Para qué |
 |-------|----------|
@@ -75,7 +75,7 @@ Si no hay ventas registradas, muestra un mensaje: *"Sin ventas registradas aún"
 
 ---
 
-## Layout que extiende
+ Layout que extiende
 
 ```blade
 @extends('layouts.dashboard')
@@ -84,8 +84,7 @@ Si no hay ventas registradas, muestra un mensaje: *"Sin ventas registradas aún"
 El layout detecta el rol del usuario autenticado y carga el sidebar correcto (admin o vendedor). Para el admin, carga `layouts.sidebar`.
 
 ---
-
-## Formato de moneda
+ Formato de moneda
 
 Los valores monetarios se muestran en pesos colombianos:
 
@@ -96,7 +95,7 @@ Los valores monetarios se muestran en pesos colombianos:
 
 ---
 
-## Dependencias externas
+ Dependencias externas
 
 | Recurso | Tipo | Para qué |
 |---------|------|----------|

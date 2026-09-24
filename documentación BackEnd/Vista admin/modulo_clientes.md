@@ -1,4 +1,4 @@
-# Módulo de Clientes — Vista del Administrador
+ Módulo de Clientes — Vista del Administrador
 
 **Archivos involucrados:**
 - Vista: `resources/views/vista_admin/clientes.blade.php`
@@ -9,15 +9,15 @@
 
 ---
 
-## ¿Qué es este módulo?
+ ¿Qué es este módulo?
 
-Permite al administrador gestionar los clientes del negocio. Puede registrar nuevos clientes, editar sus datos, activarlos/desactivarlos y eliminarlos. El admin ve **todos** los clientes del sistema, sin importar qué vendedor los creó.
+Permite al administrador gestionar los clientes del negocio. Puede registrar nuevos clientes, editar sus datos, activarlos/desactivarlos y eliminarlos. El admin ve TODOS los clientes del sistema, sin importar qué vendedor los creó.
 
 Los clientes activos son los que aparecen disponibles al registrar una venta.
 
 ---
 
-## Rutas
+ Rutas
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -29,7 +29,7 @@ Los clientes activos son los que aparecen disponibles al registrar una venta.
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\cliente` — métodos estáticos que ejecutan SQL directo (no Eloquent estándar):
 
@@ -43,9 +43,8 @@ Los clientes activos son los que aparecen disponibles al registrar una venta.
 | `eliminarCliente($id)` | DELETE del cliente |
 | `existeCorreo($correo)` | Verifica si el correo ya está registrado |
 
----
 
-## Datos que recibe la vista
+Datos que recibe la vista
 
 | Variable | Contenido |
 |----------|-----------|
@@ -55,8 +54,7 @@ Los clientes activos son los que aparecen disponibles al registrar una venta.
 | `$total` | Total de clientes registrados |
 
 ---
-
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
 Tabla con todos los clientes:
 
@@ -69,15 +67,14 @@ Tabla con todos los clientes:
 | Acciones | Lápiz (editar), toggle (activar/desactivar), basura (eliminar) |
 
 ---
+ Acción 1: Registrar cliente
 
-## Acción 1: Registrar cliente
-
-### Campos del formulario
+ Campos del formulario
 - Nombre completo (obligatorio)
 - Teléfono (opcional)
 - Correo electrónico (opcional; si se ingresa debe tener formato válido y no estar duplicado)
 
-### Validaciones en el controlador
+ Validaciones en el controlador
 
 | Validación | Error si falla |
 |-----------|----------------|
@@ -85,34 +82,34 @@ Tabla con todos los clientes:
 | Formato de correo (si se ingresó) | "El formato del correo electrónico no es válido." |
 | Correo no duplicado | "El correo electrónico ya está registrado." |
 
-### ¿Cómo se guarda?
+ ¿Cómo se guarda?
 
 El cliente queda asociado al `auth()->id()` del usuario que lo crea. Esto permite que el vendedor después filtre solo sus propios clientes.
 
 ---
 
-## Acción 2: Editar cliente
+ Acción 2: Editar cliente
 
-### ¿Qué se puede cambiar?
+ ¿Qué se puede cambiar?
 - ✅ Nombre, Teléfono, Correo
 
 El controlador valida que el correo tenga formato válido antes de guardar.
 
 ---
 
-## Acción 3: Activar / Desactivar
+ Acción 3: Activar / Desactivar
 
 Un cliente inactivo **no aparece en el select** al registrar una venta. Su historial y datos se conservan.
 
 ---
 
-## Acción 4: Eliminar
+Acción 4: Eliminar
 
 ⚠️ No se puede deshacer. Si el cliente tiene ventas asociadas, la eliminación puede fallar por restricción de clave foránea — el modelo devuelve el mensaje de error del servidor.
 
 ---
 
-## Sistema de alertas
+ Sistema de alertas
 
 `ClienteController@regresarConAlerta` redirige a `admin.clientes` con `session('alert')`. La vista lanza `Swal.fire()` automáticamente al detectar la sesión.
 
@@ -124,7 +121,7 @@ Ejemplos:
 
 ---
 
-## Flujo completo
+ Flujo completo
 
 ```
 GET /admin/clientes → ClienteController@index

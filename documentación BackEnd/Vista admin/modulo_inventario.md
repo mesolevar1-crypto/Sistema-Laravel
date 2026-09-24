@@ -1,4 +1,4 @@
-# Módulo de Inventario — Vista del Administrador
+Módulo de Inventario — Vista del Administrador
 
 **Archivos involucrados:**
 - Vista: `resources/views/vista_admin/inventario.blade.php`
@@ -9,7 +9,7 @@
 
 ---
 
-## ¿Qué es este módulo?
+ ¿Qué es este módulo?
 
 Muestra el estado actual del stock de todos los productos del sistema. El administrador puede ver cuáles están en nivel normal, cuáles tienen stock bajo y cuáles están agotados. También puede ajustar manualmente el stock actual y el stock mínimo de cualquier producto.
 
@@ -17,7 +17,7 @@ El stock se actualiza automáticamente cuando se registran ventas (baja) o compr
 
 ---
 
-## Rutas
+ Rutas
 
 | Acción | Método | URL | Nombre | Controlador |
 |--------|--------|-----|--------|-------------|
@@ -26,7 +26,7 @@ El stock se actualiza automáticamente cuando se registran ventas (baja) o compr
 
 ---
 
-## Modelo relacionado
+ Modelo relacionado
 
 `App\Models\inventario` — métodos estáticos:
 
@@ -38,7 +38,7 @@ El stock se actualiza automáticamente cuando se registran ventas (baja) o compr
 
 ---
 
-## Datos que recibe la vista
+ Datos que recibe la vista
 
 | Variable | Contenido |
 |----------|-----------|
@@ -50,7 +50,7 @@ El stock se actualiza automáticamente cuando se registran ventas (baja) o compr
 
 ---
 
-## ¿Qué muestra la pantalla?
+ ¿Qué muestra la pantalla?
 
 **4 tarjetas KPI:**
 
@@ -69,7 +69,7 @@ El stock se actualiza automáticamente cuando se registran ventas (baja) o compr
 
 ---
 
-## Estado visual de cada producto
+ Estado visual de cada producto
 
 El estado se determina comparando `stock_actual` con `stock_minimo`:
 
@@ -81,12 +81,12 @@ El estado se determina comparando `stock_actual` con `stock_minimo`:
 
 ---
 
-## Acción: Actualizar stock manualmente
+ Acción: Actualizar stock manualmente
 
-### ¿Cómo se activa?
+3 ¿Cómo se activa?
 Clic en el **lápiz** de cualquier producto → modal con campos de stock actual y mínimo.
 
-### Validaciones del controlador
+3 Validaciones del controlador
 
 | Validación | Error si falla |
 |-----------|----------------|
@@ -99,7 +99,7 @@ Si el usuario es vendedor, el controlador también verifica que el producto pert
 
 ---
 
-## Actualización automática del stock
+ Actualización automática del stock
 
 | Evento | Qué hace al stock |
 |--------|------------------|
@@ -111,13 +111,13 @@ Si el usuario es vendedor, el controlador también verifica que el producto pert
 
 ---
 
-## Sistema de alertas
+Sistema de alertas
 
 `InventarioController@regresarConAlerta` redirige a `admin.inventario` (o `vendedor.inventario`) con `session('alert')`. La vista lanza `Swal.fire()`.
 
 ---
 
-## Alerta global de stock bajo
+ Alerta global de stock bajo
 
 Independientemente de este módulo, el sistema tiene una alerta flotante que aparece en **todas las páginas** del panel. Cuando hay productos con stock bajo o agotados, muestra un panel en la esquina de la pantalla con los nombres y stocks de esos productos.
 
@@ -126,7 +126,7 @@ Esta alerta la alimenta el endpoint:
 
 ---
 
-## Flujo completo
+ Flujo completo
 
 ```
 GET /admin/inventario → InventarioController@index
