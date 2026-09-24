@@ -367,6 +367,7 @@
     </div>
 
 </div>
+@include('layouts.stock-alerta')
 
 @include('layouts.footer')
 

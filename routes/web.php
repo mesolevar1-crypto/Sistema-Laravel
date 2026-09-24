@@ -495,8 +495,19 @@ Route::middleware(['auth'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| CERRAR SESIÓN
+| ALERTA GLOBAL DE STOCK (Admin y Vendedor)
+| Devuelve los productos agotados / con stock bajo para el panel
+| flotante que aparece en todos los módulos (layouts.dashboard).
 |--------------------------------------------------------------------------
 */
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/stock-alertas', [VentaController::class, 'alertasStock'])->name('stock.alertas');
+});
+
+/*
+|--------------------------------------------------------------------------
+| CERRAR SESIÓN
+|--------------------------------------------------------------------------
+*/
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

@@ -133,8 +133,17 @@ class Venta extends Model
     }
 
     // ============================================================
-    // PRODUCTOS ACTIVOS + STOCK (para el select del modal)
+    // PRODUCTOS ACTIVOS + STOCK + STOCK MÍNIMO (para el select del
+    // modal y para la alerta global de stock).
     // No trae precio: el precio se digita al vender.
+    //
+    // stock_minimo es necesario para que el navegador y el servidor
+    // sepan cuándo un producto está por debajo del mínimo (bloquearlo
+    // en la venta y mostrarlo en el panel "Productos por comprar").
+    //
+    // NOTA: se asume que stock_minimo está en la tabla `inventories`
+    // (junto a stock_actual). Si en tu BD está en `products`, cambia
+    // i.stock_minimo por p.stock_minimo.
     // ============================================================
     public static function obtenerProductosDisponibles(): array
     {
@@ -147,6 +156,7 @@ class Venta extends Model
                 'p.nombre',
                 'p.imagen',
                 DB::raw('COALESCE(i.stock_actual, 0) as stock'),
+                DB::raw('COALESCE(i.stock_minimo, 0) as stock_minimo'),
             ])
             ->get()
             ->map(fn ($fila) => (array) $fila)

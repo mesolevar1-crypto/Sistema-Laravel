@@ -508,6 +508,9 @@
     @csrf
 </form>
 
+{{-- Alertas de stock (agotado / stock bajo) --}}
+<script src="{{ asset('js/stock-alerta.js') }}"></script>
+
 <script>
 // ============================================================
 // COMBO BUSCABLE (autocompletado) - reutilizable para cliente y producto
@@ -577,10 +580,18 @@ function initCombo(config) {
 
     lista.addEventListener('click', function (e) {
         var item = e.target.closest('.combo-item');
-        if (!item || item.classList.contains('deshabilitado')) return;
+        if (!item) return;
+
         var idx = Number(item.dataset.idx);
         var d = itemsVisibles[idx];
         if (!d) return;
+
+        // Producto bloqueado (agotado / stock bajo): no se selecciona, se avisa
+        if (item.classList.contains('deshabilitado')) {
+            if (config.onBloqueado) config.onBloqueado(d);
+            return;
+        }
+
         input.value = config.getLabel(d);
         hidden.value = config.getValue(d);
         lista.style.display = 'none';
@@ -640,6 +651,7 @@ var comboCliente = initCombo({
 
 function abrirModalNuevaVenta() {
     abrirModal('modalCrear');
+    avisarResumenStock(productos);
     var filas = document.getElementById('filasProductos');
     if (filas && filas.children.length === 0) {
         agregarFila();
@@ -783,11 +795,14 @@ function agregarFila() {
         listId: 'listaProducto-' + idx,
         datos: productos,
         getLabel: function (p) {
-            var stock = parseInt(p.stock) || 0;
-            return (p.nombre || 'Producto') + (stock <= 0 ? ' — SIN STOCK' : ' [' + stock + ' disp.]');
+            var st = stockEstado(p);
+            if (st === 'agotado') return (p.nombre || 'Producto') + ' — AGOTADO';
+            if (st === 'bajo')    return (p.nombre || 'Producto') + ' — STOCK BAJO [' + p.stock + ']';
+            return (p.nombre || 'Producto') + ' [' + p.stock + ' disp.]';
         },
         getValue: function (p) { return p.id_producto; },
-        getDisabled: function (p) { return (parseInt(p.stock) || 0) <= 0; },
+        getDisabled: function (p) { return stockEstado(p) !== 'ok'; },
+        onBloqueado: function (p) { avisarStock(p); },
         placeholderVacio: 'No se encontraron productos',
         onSelect: function () { onProductoChange(idx); }
     });

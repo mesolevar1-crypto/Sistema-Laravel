@@ -26,6 +26,13 @@ use Throwable;
  * ESE vendedor. Así un vendedor no puede ver ni tocar ventas de
  * otros vendedores ni del administrador, aunque cambie el ID en la
  * URL a mano.
+ *
+ * STOCK:
+ * - alertasStock() alimenta la alerta global (panel flotante) que
+ *   aparece en todos los módulos.
+ * - store() rechaza en el servidor cualquier producto agotado o con
+ *   stock igual/menor al mínimo, aunque alguien salte el bloqueo
+ *   que ya existe en el navegador.
  */
 class VentaController extends Controller
 {
@@ -75,6 +82,42 @@ class VentaController extends Controller
             'ventas', 'resumen', 'clientes', 'productos', 'unidades',
             'pagina', 'paginas', 'total'
         ));
+    }
+
+    // ============================================================
+    // ALERTA GLOBAL DE STOCK (JSON)
+    //
+    // Devuelve SOLO los productos agotados o con stock <= stock mínimo,
+    // con nombre, stock y mínimo, para que el panel flotante (que sale
+    // en todos los módulos) diga exactamente qué hay que comprar.
+    //
+    // Ruta accesible para admin y vendedor (ver routes/web.php).
+    // ============================================================
+    public function alertasStock(): JsonResponse
+    {
+        try {
+            $criticos = [];
+
+            foreach (Venta::obtenerProductosDisponibles() as $producto) {
+                $p = (array) $producto;
+
+                if ($this->estadoStock($p) === 'ok') {
+                    continue;
+                }
+
+                $criticos[] = [
+                    'id_producto'  => (int) ($p['id_producto'] ?? 0),
+                    'nombre'       => (string) ($p['nombre'] ?? 'Producto'),
+                    'stock'        => (int) ($p['stock'] ?? 0),
+                    'stock_minimo' => (int) ($p['stock_minimo'] ?? 0),
+                ];
+            }
+
+            return response()->json($criticos);
+        } catch (Throwable $e) {
+            // La alerta nunca debe romper la página: si falla, lista vacía.
+            return response()->json([]);
+        }
     }
 
     // ============================================================
@@ -135,6 +178,21 @@ class VentaController extends Controller
 
         if (empty($items)) {
             return $this->regresarConAlerta('warning', 'Sin productos válidos', 'Debes agregar al menos un producto.');
+        }
+
+        // --------------------------------------------------------
+        // STOCK: no se puede vender un producto agotado o con stock
+        // igual/menor al mínimo. Se valida aquí en el servidor porque
+        // el bloqueo del navegador se puede saltar.
+        // --------------------------------------------------------
+        $bloqueados = $this->productosBloqueadosPorStock($items);
+
+        if (!empty($bloqueados)) {
+            return $this->regresarConAlerta(
+                'error',
+                'Productos sin stock disponible',
+                'No se pueden vender: ' . implode(', ', $bloqueados) . '. Debes comprar stock primero.'
+            );
         }
 
         $resultado = Venta::registrar($idUsuario, $idCliente, $metodoPago, $items);
@@ -315,6 +373,63 @@ class VentaController extends Controller
         $numero = $venta['numero_factura'] ?? ('VENTA-' . $venta['id_venta']);
 
         return $pdf->download("Comprobante_{$numero}.pdf");
+    }
+
+    // ============================================================
+    // ESTADO DE STOCK de un producto (misma regla que stockEstado()
+    // en public/js/stock-alerta.js, para que navegador y servidor
+    // siempre coincidan):
+    //   'agotado' -> stock 0
+    //   'bajo'    -> stock <= stock mínimo
+    //   'ok'      -> se puede vender
+    // ============================================================
+    private function estadoStock($producto): string
+    {
+        $p      = (array) $producto;
+        $stock  = (int) ($p['stock'] ?? 0);
+        $minimo = (int) ($p['stock_minimo'] ?? 0);
+
+        if ($stock <= 0) {
+            return 'agotado';
+        }
+
+        if ($stock <= $minimo) {
+            return 'bajo';
+        }
+
+        return 'ok';
+    }
+
+    // ============================================================
+    // De los items de una venta, devuelve los NOMBRES de los productos
+    // que están agotados o con stock bajo (vacío = todo bien).
+    // ============================================================
+    private function productosBloqueadosPorStock(array $items): array
+    {
+        $catalogo = [];
+
+        foreach (Venta::obtenerProductosDisponibles() as $producto) {
+            $p = (array) $producto;
+            $catalogo[(int) ($p['id_producto'] ?? 0)] = $p;
+        }
+
+        $bloqueados = [];
+
+        foreach ($items as $item) {
+            $p = $catalogo[(int) $item['id_producto']] ?? null;
+
+            // Si el producto no está en el catálogo, la validación
+            // de existencia/estado la sigue haciendo el modelo.
+            if ($p === null) {
+                continue;
+            }
+
+            if ($this->estadoStock($p) !== 'ok') {
+                $bloqueados[] = (string) ($p['nombre'] ?? ('Producto #' . $item['id_producto']));
+            }
+        }
+
+        return array_values(array_unique($bloqueados));
     }
 
     // ============================================================

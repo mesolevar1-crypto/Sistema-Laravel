@@ -1,12 +1,8 @@
-
 @extends('layouts.dashboard')
 @php
     $titulo = 'Panel de compras - Administrador';
 @endphp
 @section('content')
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <style>
 .btn-primario {
@@ -155,40 +151,21 @@
     opacity:.4;
     pointer-events:none;
 }
+/* --- combo buscable (proveedor / producto), igual al de ventas --- */
+.combo-lista {
+    position:absolute; top:100%; left:0; right:0; background:#fff;
+    border:1.5px solid #E5E7EB; border-radius:10px; margin-top:4px;
+    max-height:220px; overflow-y:auto; z-index:60;
+    box-shadow:0 8px 24px rgba(0,0,0,.10); display:none;
+}
+.combo-item { padding:9px 12px; font-size:.87rem; cursor:pointer; color:#171717; }
+.combo-item:hover, .combo-item.activo { background:#DDF5EC; }
+.combo-item.deshabilitado { color:#9CA3AF; cursor:not-allowed; }
+.combo-vacio { padding:12px; text-align:center; color:#9CA3AF; font-size:.82rem; }
 @media (max-width:900px) {
     .item-row-fila1, .item-row-fila2, .item-row-fila3 {
         grid-template-columns: 1fr;
     }
-}
-</style>
-
-<style>
-.choices { margin: 0; }
-.choices__inner {
-    min-height: 42px;
-    padding: 9px 12px;
-    border: 1.5px solid #E5E7EB;
-    border-radius: 10px;
-    background: #fff;
-    color: #171717;
-    font-family: 'Outfit', sans-serif;
-    font-size: .9rem;
-}
-.is-focused .choices__inner,
-.is-open .choices__inner {
-    border-color: #61D0A7;
-    box-shadow: 0 0 0 4px rgba(97,208,167,.15);
-}
-.choices__list--dropdown {
-    z-index: 60;
-    border: 1.5px solid #E5E7EB;
-    border-radius: 10px;
-    background: #fff;
-    color: #171717;
-}
-.choices__list--dropdown .choices__item--selectable.is-highlighted {
-    background: #DDF5EC;
-    color: #01614B;
 }
 </style>
 
@@ -399,7 +376,7 @@
                         Nueva Compra
                     </h3>
                     <p style="font-size:.75rem;color:#5F6673;margin-top:2px;">
-                        Selecciona un proveedor activo, luego el producto, y escribe el precio y la cantidad, y selecciona la unidad que negociaste.
+                        Busca un proveedor activo, luego busca el producto, y escribe el precio y la cantidad, y selecciona la unidad que negociaste.
                     </p>
                 </div>
             </div>
@@ -428,23 +405,11 @@
                         No hay proveedores activos disponibles. Registra o activa un proveedor primero.
                     </div>
                 @else
-                    <div style="position:relative;">
-                        <select
-                            id="selectProveedor"
-                            name="id_proveedor"
-                            required
-                            class="campo-input"
-                            style="appearance:none;cursor:pointer;padding-right:36px;"
-                            onchange="filtrarProductosPorProveedor()"
-                        >
-                            <option value="">Selecciona un proveedor</option>
-                            @foreach ($proveedores as $pv)
-                                <option value="{{ (int) $pv['id_proveedor'] }}">
-                                    {{ $pv['nombre'] ?? 'Proveedor' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <i class="fas fa-chevron-down" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#00875F;font-size:.75rem;pointer-events:none;"></i>
+                    <div id="wrapProveedor" style="position:relative;">
+                        <input type="text" id="buscarProveedor" class="campo-input"
+                            placeholder="Buscar proveedor por nombre..." autocomplete="off">
+                        <input type="hidden" id="selectProveedor" name="id_proveedor" required>
+                        <div id="listaProveedor" class="combo-lista"></div>
                     </div>
                 @endif
             </div>
@@ -561,63 +526,113 @@
 
 <script>
 // ============================================================
+// COMBO BUSCABLE (autocompletado) - igual que en ventas, reutilizable
+// para proveedor y para producto por fila
+// ============================================================
+function initCombo(config) {
+    var input   = document.getElementById(config.inputId);
+    var hidden  = document.getElementById(config.hiddenId);
+    var lista   = document.getElementById(config.listId);
+    var wrapper = document.getElementById(config.wrapperId);
+    if (!input || !hidden || !lista || !wrapper) return null;
+
+    var datos = config.datos || [];
+    var itemsVisibles = [];
+    var indiceActivo = -1;
+
+    function render(filtro) {
+        var texto = (filtro || '').toLowerCase().trim();
+        itemsVisibles = datos.filter(function (d) {
+            return config.getLabel(d).toLowerCase().indexOf(texto) !== -1;
+        });
+        indiceActivo = -1;
+
+        if (itemsVisibles.length === 0) {
+            lista.innerHTML = '<div class="combo-vacio">' + (config.placeholderVacio || 'Sin resultados') + '</div>';
+        } else {
+            lista.innerHTML = itemsVisibles.map(function (d, i) {
+                var deshabilitado = config.getDisabled ? config.getDisabled(d) : false;
+                return '<div class="combo-item' + (deshabilitado ? ' deshabilitado' : '') + '" data-idx="' + i + '">' +
+                    escapeHtml(config.getLabel(d)) + '</div>';
+            }).join('');
+        }
+        lista.style.display = 'block';
+    }
+
+    function marcarActivo(items) {
+        items.forEach(function (it) { it.classList.remove('activo'); });
+        if (items[indiceActivo]) {
+            items[indiceActivo].classList.add('activo');
+            items[indiceActivo].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    input.addEventListener('focus', function () { render(input.value); });
+
+    input.addEventListener('input', function () {
+        hidden.value = '';
+        render(input.value);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        var items = lista.querySelectorAll('.combo-item:not(.deshabilitado)');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            indiceActivo = Math.min(indiceActivo + 1, items.length - 1);
+            marcarActivo(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            indiceActivo = Math.max(indiceActivo - 1, 0);
+            marcarActivo(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (indiceActivo >= 0 && items[indiceActivo]) items[indiceActivo].click();
+        } else if (e.key === 'Escape') {
+            lista.style.display = 'none';
+        }
+    });
+
+    lista.addEventListener('click', function (e) {
+        var item = e.target.closest('.combo-item');
+        if (!item || item.classList.contains('deshabilitado')) return;
+        var idx = Number(item.dataset.idx);
+        var d = itemsVisibles[idx];
+        if (!d) return;
+        input.value = config.getLabel(d);
+        hidden.value = config.getValue(d);
+        lista.style.display = 'none';
+        if (config.onSelect) config.onSelect(d);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!wrapper.contains(e.target)) lista.style.display = 'none';
+    });
+
+    return {
+        limpiar: function () { input.value = ''; hidden.value = ''; }
+    };
+}
+
+// ============================================================
 // DATOS DESDE PHP (vía Blade)
 // ============================================================
 var productos = @json($productos);
 var unidades = @json($unidades);
+var proveedoresData = @json($proveedores);
 
 var baseCompras = "{{ url('/admin/compras') }}";
 
 var filaCount = 0;
-var choicesProveedor = null;
-var choicesProductos = {};
 
-function inicializarChoicesProveedor() {
-    var select = document.getElementById('selectProveedor');
-    if (!select || choicesProveedor || typeof Choices === 'undefined') return;
-
-    choicesProveedor = new Choices(select, {
-        searchEnabled: true,
-        searchPlaceholderValue: 'Buscar proveedor...',
-        itemSelectText: '',
-        shouldSort: false
-    });
-}
-
-function destruirChoicesProductos() {
-    Object.keys(choicesProductos).forEach(function (idx) {
-        if (choicesProductos[idx]) choicesProductos[idx].destroy();
-        delete choicesProductos[idx];
-    });
-}
-
-function inicializarChoicesProducto(selectEl, idx) {
-    if (!selectEl || typeof Choices === 'undefined') return;
-
-    choicesProductos[idx] = new Choices(selectEl, {
-        searchEnabled: true,
-        searchPlaceholderValue: 'Buscar producto...',
-        itemSelectText: '',
-        shouldSort: false
-    });
-}
-
-// ============================================================
-// GENERAR OPCIONES DE UNIDAD (catálogo `units`)
-// ============================================================
 function generarOpcionesUnidad(placeholder) {
     var texto = placeholder || 'Unidad';
     var html = '<option value="">' + escapeHtml(texto) + '</option>';
     unidades.forEach(function (u) {
-        html += '<option value="' + u.id_unidad + '">' +
-            escapeHtml(u.nombre || 'Unidad') + '</option>';
+        html += '<option value="' + u.id_unidad + '">' + escapeHtml(u.nombre || 'Unidad') + '</option>';
     });
     return html;
 }
 
-// ============================================================
-// MODALES
-// ============================================================
 function abrirModal(id) {
     var el = document.getElementById(id);
     if (el) el.classList.remove('hidden');
@@ -628,9 +643,20 @@ function cerrarModal(id) {
     if (el) el.classList.add('hidden');
 }
 
+// Combo de proveedor (se inicializa una sola vez; el bloque solo existe si hay proveedores)
+var comboProveedor = initCombo({
+    wrapperId: 'wrapProveedor',
+    inputId: 'buscarProveedor',
+    hiddenId: 'selectProveedor',
+    listId: 'listaProveedor',
+    datos: proveedoresData,
+    getLabel: function (p) { return p.nombre || 'Proveedor'; },
+    getValue: function (p) { return p.id_proveedor; },
+    placeholderVacio: 'No se encontraron proveedores'
+});
+
 function abrirModalNuevaCompra() {
     abrirModal('modalCrear');
-    inicializarChoicesProveedor();
     var filas = document.getElementById('filasProductos');
     if (filas && filas.children.length === 0) {
         agregarFila();
@@ -639,15 +665,9 @@ function abrirModalNuevaCompra() {
 
 function cerrarModalCrear() {
     cerrarModal('modalCrear');
-    destruirChoicesProductos();
-    if (choicesProveedor) {
-        choicesProveedor.destroy();
-        choicesProveedor = null;
-    }
     var filas = document.getElementById('filasProductos');
     if (filas) filas.innerHTML = '';
-    var proveedor = document.getElementById('selectProveedor');
-    if (proveedor) proveedor.value = '';
+    if (comboProveedor) comboProveedor.limpiar();
     var total = document.getElementById('totalCompra');
     if (total) total.textContent = '$0';
     filaCount = 0;
@@ -672,68 +692,9 @@ function confirmarEliminar() {
 }
 
 // ============================================================
-// FILTRAR PRODUCTOS POR PROVEEDOR
-// ============================================================
-function filtrarProductosPorProveedor() {
-    var selectProveedor = document.getElementById('selectProveedor');
-    var idProveedor = parseInt(selectProveedor.value) || 0;
-
-    document.querySelectorAll('.select-producto').forEach(function (select) {
-        var idx = select.dataset.idx;
-        reconstruirOpcionesProducto(select, idProveedor, idx);
-    });
-
-    recalcularTotal();
-}
-
-// ============================================================
-// RECONSTRUIR OPCIONES DE PRODUCTO
-// ============================================================
-function reconstruirOpcionesProducto(selectEl, idProveedor, idx) {
-    if (!selectEl) return;
-
-    if (choicesProductos[idx]) {
-        choicesProductos[idx].destroy();
-        delete choicesProductos[idx];
-    }
-
-    var valorActual = selectEl.value;
-    selectEl.innerHTML = '<option value="">Seleccionar producto</option>';
-
-    productos.forEach(function (p) {
-        var option = document.createElement('option');
-        option.value = p.id_producto;
-        option.dataset.categoria = p.categoria || '';
-
-        var texto = p.producto || 'Producto';
-        if (p.categoria) texto += ' — ' + p.categoria;
-        option.textContent = texto;
-
-        selectEl.appendChild(option);
-    });
-
-    if (valorActual) selectEl.value = valorActual;
-    onProductoChange(idx);
-    inicializarChoicesProducto(selectEl, idx);
-}
-
-// ============================================================
 // AGREGAR FILA
 // ============================================================
 function agregarFila() {
-    var proveedor = document.getElementById('selectProveedor');
-    var idProveedor = proveedor ? parseInt(proveedor.value) || 0 : 0;
-
-    if (idProveedor <= 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Selecciona un proveedor',
-            text: 'Primero debes seleccionar un proveedor activo.',
-            confirmButtonColor: '#00875F'
-        });
-        return;
-    }
-
     var container = document.getElementById('filasProductos');
     var idx = filaCount++;
     var div = document.createElement('div');
@@ -746,12 +707,12 @@ function agregarFila() {
             '<p class="item-row-seccion">Qué compras</p>' +
             '<div class="item-row-fila1">' +
 
-                '<div>' +
+                '<div id="wrapProducto-' + idx + '" style="position:relative;">' +
                     '<span class="item-row-label">Producto</span>' +
-                    '<select class="campo-input select-producto" name="id_producto[]" data-idx="' + idx + '" required ' +
-                        'onchange="onProductoChange(' + idx + ')">' +
-                        '<option value="">Seleccionar producto</option>' +
-                    '</select>' +
+                    '<input type="text" class="campo-input" id="buscarProducto-' + idx + '" ' +
+                        'placeholder="Buscar producto..." autocomplete="off">' +
+                    '<input type="hidden" name="id_producto[]" id="producto-' + idx + '" required>' +
+                    '<div class="combo-lista" id="listaProducto-' + idx + '"></div>' +
                     '<p class="item-row-ayuda">El producto que estás comprando al proveedor.</p>' +
                 '</div>' +
 
@@ -828,20 +789,26 @@ function agregarFila() {
 
     container.appendChild(div);
 
-    var select = div.querySelector('.select-producto');
-    reconstruirOpcionesProducto(select, idProveedor, idx);
+    initCombo({
+        wrapperId: 'wrapProducto-' + idx,
+        inputId: 'buscarProducto-' + idx,
+        hiddenId: 'producto-' + idx,
+        listId: 'listaProducto-' + idx,
+        datos: productos,
+        getLabel: function (p) {
+            var texto = p.producto || 'Producto';
+            if (p.categoria) texto += ' — ' + p.categoria;
+            return texto;
+        },
+        getValue: function (p) { return p.id_producto; },
+        placeholderVacio: 'No se encontraron productos',
+        onSelect: function () { onProductoChange(idx); }
+    });
 }
 
-// ============================================================
-// QUITAR FILA
-// ============================================================
 function quitarFila(idx) {
     var el = document.getElementById('fila-' + idx);
     if (el) {
-        if (choicesProductos[idx]) {
-            choicesProductos[idx].destroy();
-            delete choicesProductos[idx];
-        }
         el.remove();
         recalcularTotal();
     }
@@ -1055,14 +1022,14 @@ document.getElementById('formCompra')?.addEventListener('submit', function (even
 
     filas.forEach(function (fila) {
         var idx = fila.id.replace('fila-', '');
-        var select = fila.querySelector('.select-producto');
+        var productoInput = document.getElementById('producto-' + idx);
         var cantidadInput = document.getElementById('cant-' + idx);
         var precioInput = document.getElementById('precio-' + idx);
         var unidadSelect = document.getElementById('unidad-' + idx);
         var cpuInput = document.getElementById('cpu-' + idx);
         var unidadContenidoSelect = document.getElementById('unidadcontenido-' + idx);
 
-        if (!select || !select.value) {
+        if (!productoInput || !productoInput.value) {
             valido = false;
             mensaje = 'Selecciona un producto en todas las filas.';
             return;

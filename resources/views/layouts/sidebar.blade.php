@@ -111,33 +111,33 @@
             <i class="fas fa-user-tie"></i><span>Clientes</span>
         </a>
 
-        <a href="{{ route('proveedores.index') }}"
-           class="nav-item {{ request()->routeIs('proveedores.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.proveedores') }}"
+           class="nav-item {{ request()->routeIs('admin.proveedores*') ? 'activo' : '' }}">
             <i class="fas fa-truck"></i><span>Proveedores</span>
         </a>
 
-        <a href="{{ route('compras.index') }}"
-           class="nav-item {{ request()->routeIs('compras.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.compras') }}"
+           class="nav-item {{ request()->routeIs('admin.compras*') ? 'activo' : '' }}">
             <i class="fas fa-shopping-bag"></i><span>Compras</span>
         </a>
 
-        <a href="{{ route('inventario.index') }}"
-           class="nav-item {{ request()->routeIs('inventario.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.inventario') }}"
+           class="nav-item {{ request()->routeIs('admin.inventario*') ? 'activo' : '' }}">
             <i class="fas fa-warehouse"></i><span>Inventario</span>
         </a>
 
-        <a href="{{ route('productos.index') }}"
-           class="nav-item {{ request()->routeIs('productos.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.productos') }}"
+           class="nav-item {{ request()->routeIs('admin.productos*') ? 'activo' : '' }}">
             <i class="fas fa-box-open"></i><span>Productos</span>
         </a>
 
-        <a href="{{ route('ventas.index') }}"
-           class="nav-item {{ request()->routeIs('ventas.*') && !request()->routeIs('inventario.*') && !request()->routeIs('reportes.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.ventas') }}"
+           class="nav-item {{ request()->routeIs('admin.ventas*') ? 'activo' : '' }}">
             <i class="fas fa-cash-register"></i><span>Ventas</span>
         </a>
 
-        <a href="{{ route('reportes.index') }}"
-           class="nav-item {{ request()->routeIs('reportes.*') ? 'activo' : '' }}">
+        <a href="{{ route('admin.reportes') }}"
+           class="nav-item {{ request()->routeIs('admin.reportes*') ? 'activo' : '' }}">
             <i class="fas fa-chart-line"></i><span>Reportes</span>
         </a>
 

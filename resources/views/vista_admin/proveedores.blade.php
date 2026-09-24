@@ -436,5 +436,5 @@ document.addEventListener('keydown',e=>{
     }
 });
 </script>
-
+@include('layouts.stock-alerta')
 @include('layouts.footer')
